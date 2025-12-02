@@ -1,5 +1,3 @@
-// classes/Moss.js
-
 class Moss {
   constructor(img, startPos, parent = null, generation = 0) {
     this.img = img;
