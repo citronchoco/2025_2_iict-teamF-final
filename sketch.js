@@ -48,6 +48,7 @@ function setup() {
     assets.moss.push(tempMoss);
   }
 
+  // 게임 시작
   initGame();
 }
 
