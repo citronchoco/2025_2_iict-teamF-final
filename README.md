@@ -26,7 +26,10 @@ ProjectName/
 └── assets/        (이미지 리소스 폴더)
     ├── plant/     (식물 관련 이미지)
     │   ├── stem_01.png
-    │   └── flower_01.png
+    │   ├── flower_01.png
+    ├── light/     (빛 구체 관련 이미지)
+    ├── background/(배경 이미지)
+    ├── font/      (폰트)
     └── moss/      (이끼 관련 이미지)
         └── moss_texture.png
 ```
