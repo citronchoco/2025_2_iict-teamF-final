@@ -27,6 +27,7 @@ let assets = {
 function preload() {
   console.log("Resource Loading...");
   // 이미지 업로드 (현재는 setup에서 임시 생성)
+  // assets.moss.push(loadImage('assets/moss/moss_texture.png')); <-- 이끼 이미지 로딩. 일단 주석처리
 }
 
 function setup() {
