@@ -19,7 +19,7 @@ class Moss {
     // 이끼 점들 관리 배열
     this.points = [];           // 각 점(포자)을 저장하는 배열
     this.maxPoints = 1200;      // 최대 점 개수 (이 이상 퍼지지 않음)
-    this.spawnInterval = 2;     // 몇 프레임마다 분기 시도
+    this.spawnInterval = 3;     // ★ 몇 프레임마다 분기 시도 (2→3, 성능 개선)
     this.lastSpawnFrame = 0;    // 마지막 분기 시도 프레임
 
     // 최초 포자(세대 0) 생성
@@ -63,7 +63,7 @@ class Moss {
     // 시간이 지날수록 maxPoints 자동 증가 (끊임없이 퍼짐)
     if (frameCount % 60 === 0) {  // 1초마다
       this.maxPoints += 50;  // 최대 점 개수 증가
-      this.maxPoints = min(this.maxPoints, 3000);  // 상한선
+      this.maxPoints = min(this.maxPoints, 1500);  // 상한선 (3000→1500, 성능 개선)
     }
     
     // 각 점의 성장 진행
@@ -91,7 +91,7 @@ class Moss {
     let parent = random(this.points);
     if (!parent) return;
     
-    // ★ 세대 제한 대폭 늘림 (화면 중앙까지 도달하도록)
+    // 세대 제한 대폭 늘림 (화면 중앙까지 도달하도록)
     if (parent.generation >= 25) return;
     
     // 부모가 어느 정도 자랐을 때만 분기
@@ -112,7 +112,7 @@ class Moss {
       let offset = createVector(cos(ang), sin(ang)).mult(distR);
       let childPos = p5.Vector.add(parent.pos, offset);
       
-      // 빛 범위 안이면 생성하지 않음 (빛이 닿는 곳은 이끼가 못 퍼짐)
+      // 핵심: 빛 범위 안이면 생성하지 않음 (빛이 닿는 곳은 이끼가 못 퍼짐)
       if (this.lightObj && this.isInLightRange && 
           this.isInLightRange(childPos.x, childPos.y, this.lightObj)) {
         continue;
@@ -193,13 +193,19 @@ class Moss {
     return false;
   }
 
-  // 화면의 표시
+  // 화면에 표시
   display() {
     push();
     imageMode(CENTER);
     
-    // 각 점을 이미지로 그림 (클리핑 없음)
+    // 각 점을 이미지로 그림
     for (let p of this.points) {
+      // ★ 성능 최적화: 화면 밖 점은 렌더링 안 함
+      if (p.pos.x < -50 || p.pos.x > width + 50 ||
+          p.pos.y < -50 || p.pos.y > height + 50) {
+        continue;
+      }
+      
       // 노이즈 기반 떨림 효과
       let jitterX = map(noise(p.noiseOff), 0, 1, -1, 1);
       let jitterY = map(noise(p.noiseOff + 50), 0, 1, -1, 1);
@@ -213,7 +219,7 @@ class Moss {
       let alpha = map(p.generation, 0, 25, 215, 80);
       tint(255, alpha);
       
-      // moss_texture.png 이미지 그리기 (클리핑 없이 바로 표시)
+      // moss_texture.png 이미지 그리기
       image(this.img, x, y, currentSize, currentSize);
       
       noTint();
