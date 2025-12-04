@@ -25,7 +25,7 @@ class Moss {
     // 이끼 점들 관리 배열
     this.points = [];
     this.maxPoints = 800;
-    this.spawnInterval = 8;
+    this.spawnInterval = 15;
     this.lastSpawnFrame = 0;
 
     this.addPoint(startPos.copy(), 0);
