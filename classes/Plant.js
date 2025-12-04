@@ -1427,11 +1427,11 @@ _getCurrentImage(arr) {
 
 
 
-  // --- 유틸리티 ---
-  _angleDelta(from, to) {
-    let d = (to - from + 540) % 360 - 180;
-    return d;
-  }
+  // // --- 유틸리티 ---
+  // _angleDelta(from, to) {
+  //   let d = (to - from + 540) % 360 - 180;
+  //   return d;
+  // }
 
 
   
