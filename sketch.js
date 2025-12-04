@@ -92,7 +92,6 @@ function draw() {
 function runGameLogic() {
   // --- 1. 플레이어(Light) 업데이트 ---
   lightObj.update();
-  lightObj.display();
 
   // --- 2. 식물 업데이트 ---
   for (let p of plants) {
@@ -143,6 +142,8 @@ function runGameLogic() {
       mosses.splice(i, 1);
     }
   }
+
+  lightObj.display();
 
   // --- 4. 이끼 재생성 큐 처리 ---
   processRegrowthQueue();
