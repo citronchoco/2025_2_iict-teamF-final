@@ -106,7 +106,26 @@ function runGameLogic() {
 
     // 이끼 성장 및 화면 갱신
     m.update(lightObj, (x, y, light) => dist(x, y, light.x, light.y) < (light.r || 100));
-    m.purify(lightObj); // 빛에 닿으면 제거
+
+    // 빛에 닿으면 서서히 사라지도록 처리
+    for (let j = m.points.length - 1; j >= 0; j--) {
+      let p = m.points[j];
+      let d = dist(p.pos.x, p.pos.y, lightObj.x, lightObj.y);
+
+      // 빛 반경 근처에 들어오면 dying 상태로 전환
+      if (d < (lightObj.r || 100) + 20) { // 약간 넉넉하게
+        p.dying = true;
+      }
+
+      // dying 상태인 점은 alpha를 줄여가며 삭제
+      if (p.dying) {
+        p.alpha -= 15;        // 숫자 줄이면 더 천천히 사라짐
+        if (p.alpha <= 0) {
+          m.points.splice(j, 1);
+        }
+      }
+    }
+
     m.display();
 
     // SAFE_TIME이 지났을 때만 충돌 처리
@@ -125,10 +144,10 @@ function runGameLogic() {
     }
   }
 
-
   // --- 4. 이끼 재생성 큐 처리 ---
   processRegrowthQueue();
 }
+
 
 // 배경 시간 흐름
 function updateTimeCycle() {
