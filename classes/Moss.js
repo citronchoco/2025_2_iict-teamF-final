@@ -2,7 +2,7 @@ class Moss {
   constructor(img, startPos = null) {
     this.img = img;
 
-    // === 시작 위치 설정 ===
+    // 시작 위치 설정
     if (startPos) {
       startPos = startPos.copy();
     } else {
@@ -19,10 +19,10 @@ class Moss {
       }
     }
 
-    // ★ 시작 위치 저장 (재생성용)
+    // 시작 위치 저장 (재생성용)
     this.startPos = startPos.copy();
 
-    // === 이끼 점들 관리 배열 ===
+    // 이끼 점들 관리 배열
     this.points = [];
     this.maxPoints = 800;
     this.spawnInterval = 8;
@@ -30,11 +30,11 @@ class Moss {
 
     this.addPoint(startPos.copy(), 0);
 
-    // === 전체 생애 진행도 ===
+    // 전체 생애 진행도
     this.lifeProgress = 0;
     this.lifeSpeed = random(0.0005, 0.0008);
     
-    // === 빛 관련 ===
+    // 빛 관련
     this.lightObj = null;
     this.isInLightRange = null;
   }
@@ -66,7 +66,7 @@ class Moss {
       this.maxPoints = min(this.maxPoints, 1000);
     }
 
-    // ★ 시간대에 따른 성장 배율
+    // 시간대에 따른 성장 배율
     // 0: 새벽, 1: 낮, 2: 황혼, 3: 밤
     let growthMultiplier = 1.0;
     if (timePhase === 1) {
