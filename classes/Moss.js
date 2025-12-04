@@ -2,7 +2,7 @@ class Moss {
   constructor(img, startPos = null) {
     this.img = img;
 
-    // === 시작 위치 설정 ===
+    // 시작 위치 설정
     if (startPos) {
       startPos = startPos.copy();
     } else {
@@ -19,10 +19,10 @@ class Moss {
       }
     }
 
-    // ★ 시작 위치 저장 (재생성용)
+    // 시작 위치 저장 (재생성용)
     this.startPos = startPos.copy();
 
-    // === 이끼 점들 관리 배열 ===
+    // 이끼 점들 관리 배열
     this.points = [];
     this.maxPoints = 800;
     this.spawnInterval = 8;
@@ -30,11 +30,11 @@ class Moss {
 
     this.addPoint(startPos.copy(), 0);
 
-    // === 전체 생애 진행도 ===
+    // 전체 생애 진행도
     this.lifeProgress = 0;
     this.lifeSpeed = random(0.0005, 0.0008);
     
-    // === 빛 관련 ===
+    // 빛 관련
     this.lightObj = null;
     this.isInLightRange = null;
   }
@@ -65,10 +65,24 @@ class Moss {
       this.maxPoints += 20;
       this.maxPoints = min(this.maxPoints, 1000);
     }
-    
+
+    // 시간대에 따른 성장 배율
+    // 0: 새벽, 1: 낮, 2: 황혼, 3: 밤
+    let growthMultiplier = 1.0;
+    if (timePhase === 1) {
+      // 낮: 성장 멈춤
+      growthMultiplier = 0.0;
+    } else if (timePhase === 0 || timePhase === 2) {
+      // 새벽, 황혼: 50%
+      growthMultiplier = 0.5;
+    } else if (timePhase === 3) {
+      // 밤: 100% (정상)
+      growthMultiplier = 1.0;
+    }
+
     for (let p of this.points) {
       if (p.progress < 1) {
-        p.progress += p.growthSpeed * (0.7 + this.lifeProgress * 0.8);
+        p.progress += p.growthSpeed * (0.7 + this.lifeProgress * 0.8) * growthMultiplier;
       }
       p.noiseOff += 0.02;
     }
@@ -130,17 +144,17 @@ class Moss {
     this.maxPoints = min(1800, this.maxPoints + 120);
   }
   
-purify(light) {
-  for (let i = this.points.length - 1; i >= 0; i--) {
-    let p = this.points[i];
-    let d = dist(p.pos.x, p.pos.y, light.x, light.y);
-    let lightRadius = light.r || light.size || 80;
-    
-    if (d < lightRadius) {
-      this.points.splice(i, 1);
+  purify(light) {
+    for (let i = this.points.length - 1; i >= 0; i--) {
+      let p = this.points[i];
+      let d = dist(p.pos.x, p.pos.y, light.x, light.y);
+      let lightRadius = light.r || light.size || 80;
+      
+      if (d < lightRadius) {
+        this.points.splice(i, 1);
+      }
     }
   }
-}
 
   isOffScreen() {
     for (let p of this.points) {
@@ -215,4 +229,3 @@ purify(light) {
     pop();
   }
 }
-// 이끼 생성 함수
