@@ -1,22 +1,22 @@
 // Plant.js
 
 // --- 에셋 경로 상수 ---
-const PLANT_ASSETS = {
-  stems: [
-    'assets/plant/stem_01.png',
-    'assets/plant/stem_02.png',
-    'assets/plant/stem_03.png'
-  ],
-  leaves: [
-    'assets/plant/leaf_01.png',
-    'assets/plant/leaf_02.png',
-    'assets/plant/leaf_03.png'
-  ],
-  flowers: [
-    'assets/plant/flower_01.png',
-    'assets/plant/flower_02.png'
-  ]
-};
+// const PLANT_ASSETS = {
+//   stems: [
+//     'assets/plant/stem_01.png',
+//     'assets/plant/stem_02.png',
+//     'assets/plant/stem_03.png'
+//   ],
+//   leaves: [
+//     'assets/plant/leaf_01.png',
+//     'assets/plant/leaf_02.png',
+//     'assets/plant/leaf_03.png'
+//   ],
+//   flowers: [
+//     'assets/plant/flower_01.png',
+//     'assets/plant/flower_02.png'
+//   ]
+// };
 
 // --- 에셋 크기 정보 (스케일 계산용) ---
 const ASSET_SIZES = {

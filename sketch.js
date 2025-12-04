@@ -8,10 +8,10 @@ const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2 };
 
 // 설정값
 const CFG = {
-  PLANT_COUNT: 7,       // 식물 40개
+  PLANT_COUNT: 30,       // 식물 30개
   MOSS_COUNT: 35,       // 이끼 35개
   DAY_DURATION: 2400,   // 하루 길이
-  SAFE_TIME: 300        // [중요] 게임 시작 후 5초(300프레임) 동안 무적
+  SAFE_TIME: 300        // 게임 시작 후 5초(300프레임) 동안 무적
 };
 
 // 상태 변수
@@ -109,7 +109,7 @@ function runGameLogic() {
     m.purify(lightObj); // 빛에 닿으면 제거
     m.display();
 
-    // [핵심 수정] 무적 시간(SAFE_TIME)이 지났을 때만 충돌 처리
+    // SAFE_TIME이 지났을 때만 충돌 처리
     if (gameTime > CFG.SAFE_TIME) {
       for (let p of plants) {
         if (m.checkCollisionWithPlant(p)) {
@@ -150,9 +150,7 @@ function updateTimeCycle() {
   background(lerpColor(colors[timePhase], colors[nextPhase], localT));
 }
 
-// ------------------------------------
-// [Helper Functions] 복잡한 로직 분리
-// ------------------------------------
+// Helper Functions 복잡한 로직 분리
 
 function spawnPlants() {
   let spacing = width / (CFG.PLANT_COUNT + 1);
