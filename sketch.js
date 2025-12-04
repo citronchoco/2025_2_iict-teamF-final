@@ -125,6 +125,7 @@ function runGameLogic() {
     }
   }
 
+
   // --- 4. 이끼 재생성 큐 처리 ---
   processRegrowthQueue();
 }
