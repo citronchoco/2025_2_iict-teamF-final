@@ -49,7 +49,9 @@ class Moss {
       progress: 0,
       growthSpeed: random(0.02, 0.04),
       noiseOff: random(1000),
-      baseSize: selectedSize
+      baseSize: selectedSize,
+      alpha: 255,     // 서서히 사라짐용
+      dying: false    // 빛에 맞아 죽는 중인지
     };
     this.points.push(p);
   }
@@ -85,6 +87,7 @@ class Moss {
         p.progress += p.growthSpeed * (0.7 + this.lifeProgress * 0.8) * growthMultiplier;
       }
       p.noiseOff += 0.02;
+      // dying/alpha 감소는 sketch.js 쪽에서 처리
     }
 
     if (frameCount - this.lastSpawnFrame > this.spawnInterval) {
@@ -145,6 +148,7 @@ class Moss {
   }
   
   purify(light) {
+    // sketch.js에서 dying/alpha로 처리하니까 필요는 없지만 일단 보류
     for (let i = this.points.length - 1; i >= 0; i--) {
       let p = this.points[i];
       let d = dist(p.pos.x, p.pos.y, light.x, light.y);
@@ -212,6 +216,7 @@ class Moss {
       
       let alpha = map(p.generation, 0, 50, 230, 120);
       alpha *= p.progress;
+      alpha *= (p.alpha / 255);  // dying 상태일 때 점점 투명해짐
       
       tint(255, alpha);
       image(this.img, x, y, currentSize, currentSize);

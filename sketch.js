@@ -2,37 +2,53 @@ let plantAssets = { stems: [], leaves: [], flowers: [] };
 let mossImages = [];
 let lightImage = []; 
 
+
+
 const GAME_STATE = {
   TITLE: 0,
   PLAY: 1,
   ENDING: 2
 };
 
+
+
 // 게임 상태
 let currentState = GAME_STATE.TITLE;
 // 디버그 모드
 let debugMode = false;
+
+
 
 // 시간 시스템 변수
 let gameTime = 0;
 // 하루가 지나가는 주기 설정, 60fps 기준 약 40초
 const DAY_DURATION = 2400;
 
+
+
 // 배경 색상 보간을 위한 현재 시간대 인덱스
 // 0:새벽, 1:낮, 2:황혼, 3:밤
 let timePhase = 0;
+
+
 
 // 오브젝트 컨테이너
 let plants = [];
 let mosses = [];
 let lightObj;
 
+
+
 // 구역 관리
 let mossStartPositions = [];
 let minMossDistance = 120;
 
+
+
 // 재생성을 위한 대기열
 let regrowthQueue = [];
+
+
 
 // 이미지 리소스 로드
 function preload() {
@@ -57,6 +73,8 @@ function preload() {
   lightImage.push(loadImage('./assets/light/light_a.png'));
 }
 
+
+
 // 초기화
 function setup() {
   createCanvas(1024, 768);
@@ -64,6 +82,8 @@ function setup() {
 
   initGame();
 }
+
+
 
 // 게임 세션 시작
 function initGame() {
@@ -83,16 +103,16 @@ function initGame() {
     plants.push(new Plant(i * spacing, height, plantAssets));
   }
 
-  // 이끼 배치: 35개를 edge에서 고르게 시작
-  for (let i = 0; i < 35; i++) {
-    createMossAtEdge();
-  }
+  // 이끼 배치: 사방 끝면을 촘촘하게 채우기
+  createInitialMossOnAllEdges();
 }
+
+
 
 // 메인 루프
 function draw() {
   // 게임 상태에 따른 배경 렌더링 분기
-  if (currentState === GAME_STATE.PLAY) {
+  if (currentState === GAME_STATE.PLEY) {
     updateTimeCycle();
   } else if (currentState === GAME_STATE.TITLE) {
     background(200);
@@ -116,6 +136,8 @@ function draw() {
   // 디버그 모드 활성화 시 프레임 및 상태 정보 오버레이
   if (debugMode) drawDebugInfo();
 }
+
+
 
 // 배경 색상 업데이트
 function updateTimeCycle() {
@@ -148,6 +170,8 @@ function updateTimeCycle() {
   background(bgColor);
 }
 
+
+
 function runGameLogic() {
   // 1. 이끼 업데이트 (역순 순회)
   for (let i = mosses.length - 1; i >= 0; i--) {
@@ -159,14 +183,23 @@ function runGameLogic() {
       return d < (light.r || 100); 
     });
     
-    // 빛에 닿으면 정화 - 매 프레임마다 수동으로 제거
+    // 빛에 닿으면 정화 - 매 프레임마다 수동으로 처리 (서서히 사라짐)
     for (let j = m.points.length - 1; j >= 0; j--) {
       let p = m.points[j];
       let d = dist(p.pos.x, p.pos.y, lightObj.x, lightObj.y);
       
       // Light 클래스의 r(반지름 100)보다 조금 더 넉넉하게 체크
       if (d < 120) {
-        m.points.splice(j, 1);
+        // 즉시 삭제 대신, 사라지는 상태로 표시
+        p.dying = true;
+      }
+
+      // dying 상태면 alpha를 줄여가며 삭제
+      if (p.dying) {
+        p.alpha -= 15;            // 작게 하면 더 천천히 사라짐
+        if (p.alpha <= 0) {
+          m.points.splice(j, 1);
+        }
       }
     }
     
@@ -183,6 +216,7 @@ function runGameLogic() {
     m.display();
   }
 
+
   // 2. 재생성 대기열 처리
   for (let i = regrowthQueue.length - 1; i >= 0; i--) {
     let entry = regrowthQueue[i];
@@ -195,6 +229,7 @@ function runGameLogic() {
       regrowthQueue.splice(i, 1);
     }
   }
+
 
   // 3. 식물 업데이트 및 충돌 처리
   for (let i = 0; i < plants.length; i++) {
@@ -211,10 +246,50 @@ function runGameLogic() {
     }
   }
 
+
   // 4. 플레이어(Light) 업데이트
   lightObj.update();
   lightObj.display();
 }
+
+
+
+// 사방 끝면을 일정 간격으로 전부 채우는 초기 이끼 생성
+function createInitialMossOnAllEdges() {
+  let margin = 1;
+  let stepX = 80; // 위/아래 변에서의 x 간격
+  let stepY = 80; // 좌/우 변에서의 y 간격
+
+  // 위쪽 면
+  for (let x = 0; x <= width; x += stepX) {
+    let pos = createVector(x, margin);
+    let img = random(mossImages);
+    mosses.push(new Moss(img, pos));
+  }
+
+  // 아래쪽 면
+  for (let x = 0; x <= width; x += stepX) {
+    let pos = createVector(x, height - margin);
+    let img = random(mossImages);
+    mosses.push(new Moss(img, pos));
+  }
+
+  // 왼쪽 면
+  for (let y = 0; y <= height; y += stepY) {
+    let pos = createVector(margin, y);
+    let img = random(mossImages);
+    mosses.push(new Moss(img, pos));
+  }
+
+  // 오른쪽 면
+  for (let y = 0; y <= height; y += stepY) {
+    let pos = createVector(width - margin, y);
+    let img = random(mossImages);
+    mosses.push(new Moss(img, pos));
+  }
+}
+
+
 
 // edge에만 이끼 생성
 function createMossAtEdge() {
@@ -251,6 +326,8 @@ function createMossAtEdge() {
   }
 }
 
+
+
 // 타이틀 화면
 function drawTitleScreen() {
   textAlign(CENTER, CENTER);
@@ -262,6 +339,8 @@ function drawTitleScreen() {
   if (frameCount % 60 < 30) fill(50); else fill(150);
   text("Click to Start", width / 2, height / 2 + 50);
 }
+
+
 
 // 엔딩 화면
 function drawEndingScreen() {
@@ -275,6 +354,8 @@ function drawEndingScreen() {
   text("Press 'R' to Return to Title", width / 2, height / 2 + 30);
 }
 
+
+
 // 마우스 입력
 function mousePressed() {
   if (currentState === GAME_STATE.TITLE) {
@@ -282,6 +363,8 @@ function mousePressed() {
     currentState = GAME_STATE.PLAY;
   } 
 }
+
+
 
 // 키보드 입력
 function keyPressed() {
@@ -295,6 +378,8 @@ function keyPressed() {
     }
   }
 }
+
+
 
 // 디버그 정보
 function drawDebugInfo() {
