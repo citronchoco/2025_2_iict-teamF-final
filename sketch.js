@@ -26,6 +26,10 @@ let plants = [];
 let mosses = [];
 let lightObj;
 
+// 구역 관리
+let mossStartPositions = [];
+let minMossDistance = 120;
+
 // 이미지 리소스 로드
 function preload() {
   // Plant.js 로더 호출
@@ -50,6 +54,7 @@ function initGame() {
   plants = [];
   mosses = [];
   gameTime = 0;
+  mossStartPositions = [];
 
   // 플레이어 생성
   lightObj = new Light(width / 2, height / 2, null);
@@ -60,11 +65,9 @@ function initGame() {
     plants.push(new Plant(i * spacing, height, plantImages));
   }
 
-  // 이끼 배치
-  // 로드된 2개의 이미지 중 랜덤 선택하여 전달
-  for (let i = 0; i < 50; i++) {
-    let img = random(mossImages);
-    mosses.push(new Moss(img));
+  // 이끼 배치: 35개를 edge에서 고르게 시작
+  for (let i = 0; i < 35; i++) {
+    createMossAtEdge();
   }
 }
 
@@ -149,12 +152,6 @@ function runGameLogic() {
     });
     
     m.display();
-
-    // 화면 이탈 시 재배치
-    if (m.isOffScreen()) {
-      let img = random(mossImages);
-      mosses[i] = new Moss(img);
-    }
   }
 
   // 식물 업데이트
@@ -169,6 +166,54 @@ function runGameLogic() {
   // 플레이어 입력 처리 및 위치 업데이트
   lightObj.update();
   lightObj.display();
+}
+
+// edge에만 이끼 생성
+function createMossAtEdge() {
+  let maxAttempts = 300;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // 랜덤 면 선택 (0:위, 1:오른, 2:아래, 3:왼)
+    let edge = floor(random(4));
+    let pos;
+    let margin = 1;
+    
+    if (edge === 0) {
+      // 위쪽 면
+      pos = createVector(random(margin, width - margin), margin);
+    } else if (edge === 1) {
+      // 오른쪽 면
+      pos = createVector(width - margin, random(margin, height - margin));
+    } else if (edge === 2) {
+      // 아래쪽 면
+      pos = createVector(random(margin, width - margin), height - margin);
+    } else {
+      // 왼쪽 면
+      pos = createVector(margin, random(margin, height - margin));
+    }
+    
+    // 기존 moss들과 충분히 떨어져 있는지 체크
+    let tooClose = false;
+    for (let existingPos of mossStartPositions) {
+      let d = dist(pos.x, pos.y, existingPos.x, existingPos.y);
+      if (d < minMossDistance) {
+        tooClose = true;
+        break;
+      }
+    }
+    
+    if (tooClose) {
+      continue;
+    }
+    
+    // 충분히 떨어져 있음 → 위치 기록하고 생성
+    mossStartPositions.push(pos.copy());
+    
+    let img = random(mossImages);
+    let newMoss = new Moss(img, pos);
+    mosses.push(newMoss);
+    return;
+  }
 }
 
 // 타이틀 화면
@@ -230,6 +275,7 @@ function drawDebugInfo() {
   // 성능 모니터링을 위한 FPS 및 경과 시간
   text(`FPS: ${int(frameRate())}`, 10, 10);
   text(`Time: ${int(gameTime / 60)}s`, 10, 30);
+  text(`Mosses: ${mosses.length}`, 10, 70);
   
   // 현재 배경 색상 상태 확인
   let phaseName = ["Dawn", "Day", "Dusk", "Night"];
