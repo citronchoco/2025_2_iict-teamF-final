@@ -141,8 +141,8 @@ function updateTimeCycle() {
 
 // 게임 로직
 function runGameLogic() {
-  // 이끼 업데이트
-  for (let i = 0; i < mosses.length; i++) {
+  // 이끼 업데이트 (역순으로 순회하여 안전하게 삭제)
+  for (let i = mosses.length - 1; i >= 0; i--) {
     let m = mosses[i];
     
     // 빛 범위 판별 함수 전달
@@ -150,6 +150,17 @@ function runGameLogic() {
       let d = dist(x, y, light.x, light.y);
       return d < (light.r || 60); 
     });
+    
+    // 빛에 닿으면 정화 (매 프레임마다 체크)
+    if (frameCount % 2 === 0) {  // 2프레임마다 한번씩만 체크 (성능)
+      m.purify(lightObj);
+      
+      // 모든 점이 제거되면 moss 객체 삭제
+      if (m.points.length === 0) {
+        mosses.splice(i, 1);
+        continue;
+      }
+    }
     
     m.display();
   }
@@ -160,6 +171,19 @@ function runGameLogic() {
     
     // 이끼 배열 전달하여 상호작용 처리
     p.update(lightObj, mosses);
+    
+    // 각 이끼와 충돌 체크 후 식물 침식 (천천히)
+    if (frameCount % 30 === 0) {  // 0.5초마다 한번씩만 체크
+      for (let m of mosses) {
+        if (m.checkCollisionWithPlant(p)) {
+          // 식물이 침식당함 (erode 메서드가 있다면)
+          if (typeof p.erode === 'function') {
+            p.erode();
+          }
+        }
+      }
+    }
+    
     p.display();
   }
 
