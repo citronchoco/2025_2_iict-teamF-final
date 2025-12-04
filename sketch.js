@@ -150,7 +150,7 @@ function updateTimeCycle() {
   background(lerpColor(colors[timePhase], colors[nextPhase], localT));
 }
 
-// Helper Functions 복잡한 로직 분리
+// Helper Functions
 
 function spawnPlants() {
   let spacing = width / (CFG.PLANT_COUNT + 1);
