@@ -19,6 +19,9 @@ class Moss {
       }
     }
 
+    // ★ 시작 위치 저장 (재생성용)
+    this.startPos = startPos.copy();
+
     // === 이끼 점들 관리 배열 ===
     this.points = [];
     this.maxPoints = 800;
@@ -127,15 +130,17 @@ class Moss {
     this.maxPoints = min(1800, this.maxPoints + 120);
   }
   
-  purify(light) {
-    for (let i = this.points.length - 1; i >= 0; i--) {
-      let p = this.points[i];
-      let d = dist(p.pos.x, p.pos.y, light.x, light.y);
-      if (d < (light.size || 30)) {
-        this.points.splice(i, 1);
-      }
+purify(light) {
+  for (let i = this.points.length - 1; i >= 0; i--) {
+    let p = this.points[i];
+    let d = dist(p.pos.x, p.pos.y, light.x, light.y);
+    let lightRadius = light.r || light.size || 80;
+    
+    if (d < lightRadius) {
+      this.points.splice(i, 1);
     }
   }
+}
 
   isOffScreen() {
     for (let p of this.points) {
@@ -210,3 +215,4 @@ class Moss {
     pop();
   }
 }
+// 이끼 생성 함수
