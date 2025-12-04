@@ -173,7 +173,7 @@ function runGameLogic() {
       // 재생성 대기열에 추가 (10초 후)
       regrowthQueue.push({
         pos: m.startPos.copy(),
-        regrowFrame: frameCount + 600
+        regrowFrame: frameCount + 180
       });
       
       console.log("Regrowth queue length:", regrowthQueue.length);
