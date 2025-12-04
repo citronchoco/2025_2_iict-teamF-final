@@ -1333,10 +1333,19 @@ class Plant {
             let parent = this.segments[i-1];
             this.segments[i].updateStart(parent.getEndX(), parent.getEndY());
         }
-        this.segments[i].update();
+        // 2. 세그먼트 업데이트 시 lightObj와 this.config를 모두 전달
+        this.segments[i].update(lightObj, this.config);
     }
-    for (let l of this.leaves) l.update(this.isInLight);
-    if (this.flower) this.flower.update(this.isInLight);
+    
+    // 3. 잎 업데이트 시 this.config 전달 (기존엔 this.isInLight만 전달해서 오류 가능성 있음)
+    for (let l of this.leaves) {
+        l.update(this.config, this.isInLight);
+    }
+    
+    // 4. 꽃 업데이트 시 this.config 전달
+    if (this.flower) {
+        this.flower.update(this.config, this.isInLight);
+    }
   }
 
   _updateDebris() {

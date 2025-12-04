@@ -1,5 +1,6 @@
 let plantAssets = { stems: [], leaves: [], flowers: [] };
 let mossImages = [];
+let lightImage = []; 
 
 const GAME_STATE = {
   TITLE: 0,
@@ -36,22 +37,24 @@ let regrowthQueue = [];
 // 이미지 리소스 로드
 function preload() {
   // 줄기 이미지 로드
-  plantAssets.stems.push(loadImage('assets/plant/stem_a.png'));
-  plantAssets.stems.push(loadImage('assets/plant/stem_b.png'));
-  plantAssets.stems.push(loadImage('assets/plant/stem_c.png'));
+  plantAssets.stems.push(loadImage('./assets/plant/stem_a.png'));
+  plantAssets.stems.push(loadImage('./assets/plant/stem_b.png'));
+  plantAssets.stems.push(loadImage('./assets/plant/stem_c.png'));
   
   // 잎 이미지 로드
-  plantAssets.leaves.push(loadImage('assets/plant/leaf_a.png'));
-  plantAssets.leaves.push(loadImage('assets/plant/leaf_b.png'));
-  plantAssets.leaves.push(loadImage('assets/plant/leaf_c.png'));
+  plantAssets.leaves.push(loadImage('./assets/plant/leaf_a.png'));
+  plantAssets.leaves.push(loadImage('./assets/plant/leaf_b.png'));
+  plantAssets.leaves.push(loadImage('./assets/plant/leaf_c.png'));
   
   // 꽃 이미지 로드
-  plantAssets.flowers.push(loadImage('assets/plant/flower_1a.png'));
-  plantAssets.flowers.push(loadImage('assets/plant/flower_1b.png'));
+  plantAssets.flowers.push(loadImage('./assets/plant/flower_1a.png'));
+  plantAssets.flowers.push(loadImage('./assets/plant/flower_1b.png'));
   
   // 이끼 텍스처 2종 로드
-  mossImages.push(loadImage('assets/moss/moss_a.png'));
-  mossImages.push(loadImage('assets/moss/moss_b.png'));
+  mossImages.push(loadImage('./assets/moss/moss_a.png'));
+  mossImages.push(loadImage('./assets/moss/moss_b.png'));
+
+  lightImage.push(loadImage('./assets/light/light_a.png'));
 }
 
 // 초기화
@@ -71,8 +74,8 @@ function initGame() {
   mossStartPositions = [];
   regrowthQueue = [];
 
-  // 플레이어 생성
-  lightObj = new Light(width / 2, height / 2, null);
+  // 플레이어 생성 시 로드한 이미지(배열) 전달
+  lightObj = new Light(width / 2, height / 2, lightImage);
 
   // 식물 배치
   let spacing = width / 8;
@@ -89,7 +92,6 @@ function initGame() {
 // 메인 루프
 function draw() {
   // 게임 상태에 따른 배경 렌더링 분기
-  // 플레이 중일 때만 시간 흐름에 따른 하늘색 변화 적용
   if (currentState === GAME_STATE.PLAY) {
     updateTimeCycle();
   } else if (currentState === GAME_STATE.TITLE) {
@@ -119,12 +121,9 @@ function draw() {
 function updateTimeCycle() {
   gameTime++;
   
-  // 전체 주기 내에서의 현재 시점 계산
   let cycle = gameTime % DAY_DURATION;
-  // 진행률을 0.0에서 1.0 사이 값으로 정규화
   let phaseProgress = cycle / DAY_DURATION; 
 
-  // 시간대별 키 컬러 정의
   let cDawn = color(60, 80, 120);
   let cDay = color(135, 206, 235);
   let cDusk = color(200, 100, 50);
@@ -132,38 +131,32 @@ function updateTimeCycle() {
 
   let bgColor;
   
-  // 진행률에 따라 4단계 시간대로 구분하여 인접한 두 색상을 섞음
   if (phaseProgress < 0.25) {
-    timePhase = 0;
-    // 새벽에서 낮으로 넘어가는 구간
+    timePhase = 0; // 새벽->낮
     bgColor = lerpColor(cDawn, cDay, map(phaseProgress, 0, 0.25, 0, 1));
   } else if (phaseProgress < 0.5) {
-    timePhase = 1;
-    // 낮에서 황혼으로 넘어가는 구간
+    timePhase = 1; // 낮->황혼
     bgColor = lerpColor(cDay, cDusk, map(phaseProgress, 0.25, 0.5, 0, 1));
   } else if (phaseProgress < 0.75) {
-    timePhase = 2;
-    // 황혼에서 밤으로 넘어가는 구간
+    timePhase = 2; // 황혼->밤
     bgColor = lerpColor(cDusk, cNight, map(phaseProgress, 0.5, 0.75, 0, 1));
   } else {
-    timePhase = 3;
-    // 밤에서 다시 새벽으로 넘어가는 구간
+    timePhase = 3; // 밤->새벽
     bgColor = lerpColor(cNight, cDawn, map(phaseProgress, 0.75, 1.0, 0, 1));
   }
   
   background(bgColor);
 }
 
-// 게임 로직
 function runGameLogic() {
-  // 이끼 업데이트 (역순으로 순회하여 안전하게 삭제)
+  // 1. 이끼 업데이트 (역순 순회)
   for (let i = mosses.length - 1; i >= 0; i--) {
     let m = mosses[i];
     
-    // 빛 범위 판별 함수 전달
+    // 빛 범위 판별 함수 전달 (Light 클래스의 r 사용)
     m.update(lightObj, (x, y, light) => {
       let d = dist(x, y, light.x, light.y);
-      return d < (light.r || 60); 
+      return d < (light.r || 100); 
     });
     
     // 빛에 닿으면 정화 - 매 프레임마다 수동으로 제거
@@ -171,24 +164,18 @@ function runGameLogic() {
       let p = m.points[j];
       let d = dist(p.pos.x, p.pos.y, lightObj.x, lightObj.y);
       
-      // 빛 반경 100으로 넉넉하게
-      if (d < 100) {
+      // Light 클래스의 r(반지름 100)보다 조금 더 넉넉하게 체크
+      if (d < 120) {
         m.points.splice(j, 1);
       }
     }
     
-    // 모든 점이 제거되면 이끼 객체 삭제
+    // 모든 점이 제거되면 이끼 객체 삭제 후 재생성 대기열로
     if (m.points.length === 0) {
-      console.log("Moss fully purified! Adding to regrowth queue...");
-      
-      // 재생성 대기열에 추가 (10초 후)
       regrowthQueue.push({
         pos: m.startPos.copy(),
         regrowFrame: frameCount + 180
       });
-      
-      console.log("Regrowth queue length:", regrowthQueue.length);
-      
       mosses.splice(i, 1);
       continue;
     }
@@ -196,101 +183,38 @@ function runGameLogic() {
     m.display();
   }
 
-  // 재생성 대기열 처리
+  // 2. 재생성 대기열 처리
   for (let i = regrowthQueue.length - 1; i >= 0; i--) {
     let entry = regrowthQueue[i];
     
-    // 매 초마다 상태 출력
-    if (frameCount % 60 === 0 && regrowthQueue.length > 0) {
-      console.log(`[CHECK] Current frame: ${frameCount}`);
-      console.log(`[CHECK] Target frame: ${entry.regrowFrame}`);
-      console.log(`[CHECK] Time left: ${(entry.regrowFrame - frameCount) / 60} seconds`);
-    }
-    
     // 재생성 시간이 되면
     if (frameCount >= entry.regrowFrame) {
-      console.log("Regrowing Now");
-      console.log("Position:", entry.pos);
-      
-      // 해당 위치에 새 이끼 생성
       let img = random(mossImages);
       let newMoss = new Moss(img, entry.pos);
       mosses.push(newMoss);
-      
-      console.log("New moss created! Total mosses:", mosses.length);
-      
-      // 대기열에서 제거
       regrowthQueue.splice(i, 1);
-      console.log("Removed from queue. Queue length:", regrowthQueue.length);
     }
   }
 
-  // 식물 업데이트
+  // 3. 식물 업데이트 및 충돌 처리
   for (let i = 0; i < plants.length; i++) {
     let p = plants[i];
     
-    // 이끼 배열 전달하여 상호작용 처리
     p.update(lightObj);
     p.display();
 
-    // [추가] 충돌 로직 분리: sketch.js에서 직접 제어
-    // 모든 이끼에 대해 충돌 검사
+    // 이끼와의 충돌 검사
     for (let m of mosses) {
-      // Plant 클래스의 checkCollision 메서드 사용
-      if (p.checkCollision(m)) {
-        // 충돌 시 데미지 부여 (수치 조정 가능)
+      if (m.checkCollisionWithPlant(p)) {
         p.takeDamage(0.5);
       }
     }
   }
 
-  // 플레이어 입력 처리 및 위치 업데이트
+  // 4. 플레이어(Light) 업데이트
   lightObj.update();
   lightObj.display();
 }
-
-
-  // 재생성 대기열 처리
-  for (let i = regrowthQueue.length - 1; i >= 0; i--) {
-    let entry = regrowthQueue[i];
-    
-    // 재생성 시간이 되면
-    if (frameCount >= entry.regrowFrame) {
-      // 해당 위치에 새 moss 생성
-      let img = random(mossImages);
-      let newMoss = new Moss(img, entry.pos);
-      mosses.push(newMoss);
-      
-      // 대기열에서 제거
-      regrowthQueue.splice(i, 1);
-    }
-  }
-
-  // 식물 업데이트
-  for (let i = 0; i < plants.length; i++) {
-    let p = plants[i];
-    
-    // 이끼 배열 전달하여 상호작용 처리
-    p.update(lightObj, mosses);
-    
-    // 각 이끼와 충돌 체크 후 식물 침식 (천천히)
-    if (frameCount % 30 === 0) {
-      for (let m of mosses) {
-        if (m.checkCollisionWithPlant(p)) {
-          // 식물이 침식당함 (erode 메서드가 있다면)
-          if (typeof p.erode === 'function') {
-            p.erode();
-          }
-        }
-      }
-    }
-    
-    p.display();
-  }
-
-  // 플레이어 입력 처리 및 위치 업데이트
-  lightObj.update();
-  lightObj.display();
 
 // edge에만 이끼 생성
 function createMossAtEdge() {
@@ -302,19 +226,10 @@ function createMossAtEdge() {
     let pos;
     let margin = 1;
     
-    if (edge === 0) {
-      // 위쪽 면
-      pos = createVector(random(margin, width - margin), margin);
-    } else if (edge === 1) {
-      // 오른쪽 면
-      pos = createVector(width - margin, random(margin, height - margin));
-    } else if (edge === 2) {
-      // 아래쪽 면
-      pos = createVector(random(margin, width - margin), height - margin);
-    } else {
-      // 왼쪽 면
-      pos = createVector(margin, random(margin, height - margin));
-    }
+    if (edge === 0) pos = createVector(random(margin, width - margin), margin);
+    else if (edge === 1) pos = createVector(width - margin, random(margin, height - margin));
+    else if (edge === 2) pos = createVector(random(margin, width - margin), height - margin);
+    else pos = createVector(margin, random(margin, height - margin));
     
     // 기존 moss들과 충분히 떨어져 있는지 체크
     let tooClose = false;
@@ -326,13 +241,9 @@ function createMossAtEdge() {
       }
     }
     
-    if (tooClose) {
-      continue;
-    }
+    if (tooClose) continue;
     
-    // 충분히 떨어져 있음 → 위치 기록하고 생성
     mossStartPositions.push(pos.copy());
-    
     let img = random(mossImages);
     let newMoss = new Moss(img, pos);
     mosses.push(newMoss);
@@ -348,7 +259,6 @@ function drawTitleScreen() {
   text("OVERGROWN", width / 2, height / 2 - 20);
   
   textSize(16);
-  // 사용자 입력을 유도하기 위한 텍스트 점멸 효과
   if (frameCount % 60 < 30) fill(50); else fill(150);
   text("Click to Start", width / 2, height / 2 + 50);
 }
@@ -367,7 +277,6 @@ function drawEndingScreen() {
 
 // 마우스 입력
 function mousePressed() {
-  // 타이틀 화면에서 클릭 시 게임 시작 트리거
   if (currentState === GAME_STATE.TITLE) {
     initGame();
     currentState = GAME_STATE.PLAY;
@@ -376,12 +285,10 @@ function mousePressed() {
 
 // 키보드 입력
 function keyPressed() {
-  // 개발용 디버그 오버레이 토글
   if (key === 'd' || key === 'D') {
     debugMode = !debugMode;
   }
   
-  // 엔딩 후 재시작 로직
   if (currentState === GAME_STATE.ENDING) {
     if (key === 'r' || key === 'R') {
       currentState = GAME_STATE.TITLE;
@@ -396,17 +303,14 @@ function drawDebugInfo() {
   textAlign(LEFT, TOP);
   textSize(14);
   
-  // 성능 모니터링을 위한 FPS 및 경과 시간
   text(`FPS: ${int(frameRate())}`, 10, 10);
   text(`Time: ${int(gameTime / 60)}s`, 10, 30);
   text(`Mosses: ${mosses.length}`, 10, 70);
   text(`Regrowth Queue: ${regrowthQueue.length}`, 10, 90);
   
-  // 현재 배경 색상 상태 확인
   let phaseName = ["Dawn", "Day", "Dusk", "Night"];
   text(`Phase: ${phaseName[timePhase]}`, 10, 50);
 
-  // 마우스 좌표 정렬 확인을 위한 가이드라인
   stroke(255, 0, 0, 100);
   line(mouseX, 0, mouseX, height);
   line(0, mouseY, width, mouseY);
