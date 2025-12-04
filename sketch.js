@@ -155,25 +155,92 @@ function runGameLogic() {
       return d < (light.r || 60); 
     });
     
-    // 빛에 닿으면 정화 (매 프레임마다 체크)
-    if (frameCount % 2 === 0) {
-      m.purify(lightObj);
+    // 빛에 닿으면 정화 - 매 프레임마다 수동으로 제거
+    for (let j = m.points.length - 1; j >= 0; j--) {
+      let p = m.points[j];
+      let d = dist(p.pos.x, p.pos.y, lightObj.x, lightObj.y);
       
-      // 모든 점이 제거되면 moss 객체 삭제
-      if (m.points.length === 0) {
-        // 재생성 대기열에 추가 (10초 후)
-        regrowthQueue.push({
-          pos: m.startPos.copy(),
-          regrowFrame: frameCount + 600
-        });
-        
-        mosses.splice(i, 1);
-        continue;
+      // 빛 반경 100으로 넉넉하게
+      if (d < 100) {
+        m.points.splice(j, 1);
       }
+    }
+    
+    // 모든 점이 제거되면 이끼 객체 삭제
+    if (m.points.length === 0) {
+      console.log("Moss fully purified! Adding to regrowth queue...");
+      
+      // 재생성 대기열에 추가 (10초 후)
+      regrowthQueue.push({
+        pos: m.startPos.copy(),
+        regrowFrame: frameCount + 600
+      });
+      
+      console.log("Regrowth queue length:", regrowthQueue.length);
+      
+      mosses.splice(i, 1);
+      continue;
     }
     
     m.display();
   }
+
+  // 재생성 대기열 처리
+  for (let i = regrowthQueue.length - 1; i >= 0; i--) {
+    let entry = regrowthQueue[i];
+    
+    // 매 초마다 상태 출력
+    if (frameCount % 60 === 0 && regrowthQueue.length > 0) {
+      console.log(`[CHECK] Current frame: ${frameCount}`);
+      console.log(`[CHECK] Target frame: ${entry.regrowFrame}`);
+      console.log(`[CHECK] Time left: ${(entry.regrowFrame - frameCount) / 60} seconds`);
+    }
+    
+    // 재생성 시간이 되면
+    if (frameCount >= entry.regrowFrame) {
+      console.log("Regrowing Now");
+      console.log("Position:", entry.pos);
+      
+      // 해당 위치에 새 이끼 생성
+      let img = random(mossImages);
+      let newMoss = new Moss(img, entry.pos);
+      mosses.push(newMoss);
+      
+      console.log("New moss created! Total mosses:", mosses.length);
+      
+      // 대기열에서 제거
+      regrowthQueue.splice(i, 1);
+      console.log("Removed from queue. Queue length:", regrowthQueue.length);
+    }
+  }
+
+  // 식물 업데이트
+  for (let i = 0; i < plants.length; i++) {
+    let p = plants[i];
+    
+    // 이끼 배열 전달하여 상호작용 처리
+    p.update(lightObj, mosses);
+    
+    // 각 이끼와 충돌 체크 후 식물 침식 (천천히)
+    if (frameCount % 30 === 0) {
+      for (let m of mosses) {
+        if (m.checkCollisionWithPlant(p)) {
+          // 식물이 침식당함 (erode 메서드가 있다면)
+          if (typeof p.erode === 'function') {
+            p.erode();
+          }
+        }
+      }
+    }
+    
+    p.display();
+  }
+
+  // 플레이어 입력 처리 및 위치 업데이트
+  lightObj.update();
+  lightObj.display();
+}
+
 
   // 재생성 대기열 처리
   for (let i = regrowthQueue.length - 1; i >= 0; i--) {
@@ -216,7 +283,6 @@ function runGameLogic() {
   // 플레이어 입력 처리 및 위치 업데이트
   lightObj.update();
   lightObj.display();
-}
 
 // edge에만 이끼 생성
 function createMossAtEdge() {
