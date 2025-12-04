@@ -19,6 +19,9 @@ class Moss {
       }
     }
 
+    // ★ 시작 위치 저장 (재생성용)
+    this.startPos = startPos.copy();
+
     // === 이끼 점들 관리 배열 ===
     this.points = [];
     this.maxPoints = 800;
@@ -210,3 +213,4 @@ class Moss {
     pop();
   }
 }
+// 이끼 생성 함수
