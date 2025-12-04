@@ -8,8 +8,8 @@ const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2 };
 
 // 설정값
 const CFG = {
-  PLANT_COUNT: 30,       // 식물 30개
-  MOSS_COUNT: 35,       // 이끼 35개
+  PLANT_COUNT: 15,       // 식물 15개
+  MOSS_COUNT: 50,       // 이끼 50개
   DAY_DURATION: 2400,   // 하루 길이
   SAFE_TIME: 300        // 게임 시작 후 5초(300프레임) 동안 무적
 };
@@ -173,7 +173,7 @@ function updateTimeCycle() {
 function spawnPlants() {
   let spacing = width / (CFG.PLANT_COUNT + 1);
   for (let i = 1; i <= CFG.PLANT_COUNT; i++) {
-    plants.push(new Plant(i * spacing, height - 120, plantAssets));
+    plants.push(new Plant(i * spacing, height -10, plantAssets));
   }
 }
 
