@@ -13,9 +13,10 @@ class Light {
     this.y = mouseY;
 
     // 2. 파티클 지속 생성
-    // 200x200 범위를 채우기 위해 생성 개수를 약간 늘림
-    for (let i = 0; i < 5; i++) {
-      this.addParticle();
+    if(frameCount%2==0){
+      for (let i = 0; i < 2; i++) {
+        this.addParticle();
+      }
     }
   }
 
@@ -60,11 +61,10 @@ class Particle {
     this.loc = createVector(x + randomGaussian() * 5, y + randomGaussian() * 5);
     this.img = img;
 
-    // [확산 범위 조절 핵심]
     // 200x200(반지름 100)까지 퍼지려면 속도와 수명의 밸런스가 중요함
     // 속도를 높이면 더 멀리, 더 빨리 퍼짐
-    let vx = randomGaussian() * 1.5; // 0.8 -> 1.5로 증가 (더 넓게 퍼짐)
-    let vy = randomGaussian() * 1.5;
+    let vx = randomGaussian() * 0.8;
+    let vy = randomGaussian() * 0.8;
 
     this.velocity = createVector(vx, vy);
     
