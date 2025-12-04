@@ -107,7 +107,7 @@ function runGameLogic() {
     // 이끼 성장 및 화면 갱신
     m.update(lightObj, (x, y, light) => dist(x, y, light.x, light.y) < (light.r || 100));
 
-    // 빛에 닿으면 서서히 사라지도록 처리
+    // ★ 빛에 닿으면 서서히 사라지도록 처리
     for (let j = m.points.length - 1; j >= 0; j--) {
       let p = m.points[j];
       let d = dist(p.pos.x, p.pos.y, lightObj.x, lightObj.y);
@@ -147,7 +147,6 @@ function runGameLogic() {
   // --- 4. 이끼 재생성 큐 처리 ---
   processRegrowthQueue();
 }
-
 
 // 배경 시간 흐름
 function updateTimeCycle() {
