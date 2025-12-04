@@ -291,7 +291,7 @@ function createInitialMossOnAllEdges() {
 
 
 
-// edge에만 이끼 생성
+// Edge에만 이끼 생성
 function createMossAtEdge() {
   let maxAttempts = 300;
   
