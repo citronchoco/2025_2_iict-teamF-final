@@ -38,7 +38,9 @@ function preload() {
   plantAssets.leaves.push(loadImage('./assets/plant/leaf_c.png'));
   
   plantAssets.flowers.push(loadImage('./assets/plant/flower_1a.png'));
-  plantAssets.flowers.push(loadImage('./assets/plant/flower_1b.png'));
+  plantAssets.flowers.push(loadImage('./assets/plant/flower_2a.png'));
+  plantAssets.flowers.push(loadImage('./assets/plant/flower_3a.png'));
+  plantAssets.flowers.push(loadImage('./assets/plant/flower_4a.png'));
   
   // 이끼 및 빛 이미지 로드
   mossImages.push(loadImage('./assets/moss/moss_a.png'));
