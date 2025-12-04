@@ -1,4 +1,4 @@
-let plantImages;
+let plantAssets = { stems: [], leaves: [], flowers: [] };
 let mossImages = [];
 
 const GAME_STATE = {
@@ -28,8 +28,19 @@ let lightObj;
 
 // 이미지 리소스 로드
 function preload() {
-  // Plant.js 로더 호출
-  plantImages = loadPlantAssets();
+  // 줄기 이미지 로드
+  plantAssets.stems.push(loadImage('assets/plant/stem_a.png'));
+  plantAssets.stems.push(loadImage('assets/plant/stem_b.png'));
+  plantAssets.stems.push(loadImage('assets/plant/stem_c.png'));
+  
+  // 잎 이미지 로드
+  plantAssets.leaves.push(loadImage('assets/plant/leaf_a.png'));
+  plantAssets.leaves.push(loadImage('assets/plant/leaf_b.png'));
+  plantAssets.leaves.push(loadImage('assets/plant/leaf_c.png'));
+  
+  // 꽃 이미지 로드
+  plantAssets.flowers.push(loadImage('assets/plant/flower_1a.png'));
+  plantAssets.flowers.push(loadImage('assets/plant/flower_1b.png'));
   
   // 이끼 텍스처 2종 로드
   mossImages.push(loadImage('assets/moss/moss_a.png'));
@@ -57,7 +68,7 @@ function initGame() {
   // 식물 배치
   let spacing = width / 8;
   for (let i = 1; i <= 7; i++) {
-    plants.push(new Plant(i * spacing, height, plantImages));
+    plants.push(new Plant(i * spacing, height, plantAssets));
   }
 
   // 이끼 배치
@@ -162,8 +173,18 @@ function runGameLogic() {
     let p = plants[i];
     
     // 이끼 배열 전달하여 상호작용 처리
-    p.update(lightObj, mosses);
+    p.update(lightObj);
     p.display();
+
+    // [추가] 충돌 로직 분리: sketch.js에서 직접 제어
+    // 모든 이끼에 대해 충돌 검사
+    for (let m of mosses) {
+      // Plant 클래스의 checkCollision 메서드 사용
+      if (p.checkCollision(m)) {
+        // 충돌 시 데미지 부여 (수치 조정 가능)
+        p.takeDamage(0.5);
+      }
+    }
   }
 
   // 플레이어 입력 처리 및 위치 업데이트

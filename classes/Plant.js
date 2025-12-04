@@ -39,18 +39,18 @@ const ASSET_SIZES = {
 // --- 기본 설정 (확장 가능) ---
 const DEFAULT_PLANT_CONFIG = {
   // 성장 관련
-  growthRate: 0.0008,
+  growthRate: 0.0008, // 높을수록 빨리 큼
   maxGrowth: 1.0,
   baseGrowthSpeed: 0.3,
   lightGrowthMultiplier: 2.5,
   
   // 줄기 관련
-  maxSegments: 25,
+  maxSegments: 25, // 줄기 마디의 최대 개수 (길이 제한)
   segmentLength: 20,
   segmentGrowthSpeed: 0.8,
   angleVariation: 20,
   upwardTendency: 0.15,
-  lightSeekingStrength: 0.25,
+  lightSeekingStrength: 0.25, // 빛을 따라가는 정도(높을수록 빛을 향히 급격히 휨)
   
   // 분기 관련 (담쟁이 스타일)
   branchEnabled: false,
@@ -58,18 +58,18 @@ const DEFAULT_PLANT_CONFIG = {
   maxBranches: 3,
   
   // 잎 관련
-  leafSpawnInterval: 3,
+  leafSpawnInterval: 3, // 줄기 몇 마디마다 잎이 생길지 결정
   maxLeaves: 10,
   leafGrowthSpeed: 0.025,
   leafSwayAmount: 8,
   
   // 꽃 관련
-  flowerThreshold: 0.8,
+  flowerThreshold: 0.8, // 성장률이 얼마일 때 꽃이 피기 시작할지
   flowerGrowthSpeed: 0.018,
   
   // 체력 관련
   maxHealth: 100,
-  mossDamagePerFrame: 0.3,
+  mossDamagePerFrame: 0.3, // 이끼와 닿았을 때 체력이 깎이는 속도
   healthRegenRate: 0.05,
   healthRegenLightBonus: 0.1,
   
@@ -78,7 +78,7 @@ const DEFAULT_PLANT_CONFIG = {
   swayEnabled: true,
   
   // 단계 전환 기준 (growth 값)
-  stageThresholds: [0.0, 0.25, 0.55, 0.8]
+  stageThresholds: [0.0, 0.25, 0.55, 0.8] // 식물 이미지가 바뀌는 성장 단계의 기준점
 };
 
 
@@ -640,24 +640,35 @@ class Flower {
 // Plant 클래스: 메인 식물 객체
 // ============================================
 class Plant {
-  constructor(x, y, images = null, config = null) {
+  /**
+   * @param {number} x 초기 x 위치
+   * @param {number} y 초기 y 위치
+   * @param {Object} images { stems:[], leaves:[], flowers:[] } 형태의 이미지 세트
+   */
+  constructor(x, y, images = null) {
     // 기준점 (뿌리 위치)
     this.x = x;
     this.y = y;
     
-    // 설정 (기본값과 병합)
-    this.config = Object.assign({}, DEFAULT_PLANT_CONFIG, config || {});
-    
-    // 이미지 에셋
-    this.images = images || {
-      stems: [],
-      leaves: [],
-      flowers: []
+    // 외부에서 이미 로드된 이미지를 받음
+    this.images = images || { stems: [], leaves: [], flowers: [] };
+
+    // 랜덤 특성 부여 (식물의 다양성 확보)
+    // 3가지 타입 중 하나를 랜덤으로 섞거나 속성을 변조
+    // 랜덤 대신 기본 설정값 사용 (모든 식물이 동일한 성장 규칙 가짐)
+    this.config = {
+      growthRate: 0.0008,      // 성장 속도
+      maxSegments: 25,         // 최대 길이
+      segmentLength: 20,       // 마디 길이
+      lightSeekingStrength: 0.25, // 빛 추적 강도
+      leafSpawnInterval: 3,    // 잎 간격
+      flowerThreshold: 0.8,    // 꽃 피는 시기
+      maxHealth: 100
     };
-    
+
     // 상태
-    this.growth = 0;
-    this.stage = 0;
+    this.growth = 0; // 0.0~1.0 성장도
+    this.stage = 0; // 0:초기 -> 1:중간 -> 2:최종
     this.health = this.config.maxHealth;
     this.isDead = false;
     this.isInLight = false;
@@ -676,54 +687,40 @@ class Plant {
     this._hitboxCenterX = x;
     this._hitboxCenterY = y;
     
-    // 내부 타이머
-    this._segmentTimer = 0;
-    this._leafTimer = 0;
-    this._lastSegmentCount = 0;
-    
     // 초기화
     this._initFirstSegment();
   }
   
   // --- 초기화 ---
   _initFirstSegment() {
-    let stemImg = this._getStemImage();
+    let stemImg = this._getCurrentImage(this.images.stems);
     let firstSeg = new Segment(
       this.x,
       this.y,
-      -90 + random(-5, 5),
-      3,
-      stemImg,
-      0
+      -90 + random(-10, 10),
+      5,
+      stemImg
     );
     firstSeg.targetLength = this.config.segmentLength;
     this.segments.push(firstSeg);
   }
   
+  //===========================================
   // --- 메인 업데이트 ---
-  update(lightObj, mosses) {
+  update(lightObj) {
     // 파편 업데이트 (죽었어도 계속)
     this._updateDebris();
     
     if (this.isDead) return;
     
-    // 빛 범위 체크
+    // 빛 감지 및 성장
     this.isInLight = this._checkInLight(lightObj);
+    this._handleGrowth(lightObj);
     
-    // 빛 상호작용 → 성장
-    this._handleLight(lightObj);
-    
-    // 이끼 상호작용 → 피해
-    this._handleMoss(mosses);
-    
-    // 체력 회복 (빛 아래에서)
-    this._handleHealthRegen();
-    
-    // 성장 처리
-    this._updateGrowth(lightObj);
-    
-    // 단계 업데이트
-    this._updateStage();
+    // 체력 자연 회복
+    if (this.isInLight && this.health < this.config.maxHealth) {
+      this.health += 0.1;
+    }
     
     // 구성 요소 업데이트
     this._updateComponents(lightObj);
@@ -763,441 +760,443 @@ class Plant {
   }
   
   // --- 빛 범위 체크 ---
-  _checkInLight(lightObj) {
-    if (!lightObj) return false;
+  // _checkInLight(lightObj) {
+  //   if (!lightObj) return false;
     
-    let tip = this._getTipPosition();
-    let d = dist(tip.x, tip.y, lightObj.x, lightObj.y);
+  //   let tip = this._getTipPosition();
+  //   let d = dist(tip.x, tip.y, lightObj.x, lightObj.y);
     
-    return d < lightObj.r;
-  }
+  //   return d < lightObj.r;
+  // }
   
   // --- Light 상호작용 ---
-  _handleLight(lightObj) {
-    if (!lightObj) return;
+  // _handleLight(lightObj) {
+  //   if (!lightObj) return;
     
-    let tip = this._getTipPosition();
-    let d = dist(tip.x, tip.y, lightObj.x, lightObj.y);
+  //   let tip = this._getTipPosition();
+  //   let d = dist(tip.x, tip.y, lightObj.x, lightObj.y);
     
-    if (d < lightObj.r) {
-      // 거리에 따른 성장 강도
-      let intensity = map(d, 0, lightObj.r, 
-                         this.config.lightGrowthMultiplier, 0.8);
-      this.growth += this.config.growthRate * intensity;
-      this.growth = min(this.growth, this.config.maxGrowth);
-    } else {
-      // 빛 밖에서도 아주 느리게 성장
-      this.growth += this.config.growthRate * this.config.baseGrowthSpeed;
-      this.growth = min(this.growth, this.config.maxGrowth);
-    }
-  }
+  //   if (d < lightObj.r) {
+  //     // 거리에 따른 성장 강도
+  //     let intensity = map(d, 0, lightObj.r, 
+  //                        this.config.lightGrowthMultiplier, 0.8);
+  //     this.growth += this.config.growthRate * intensity;
+  //     this.growth = min(this.growth, this.config.maxGrowth);
+  //   } else {
+  //     // 빛 밖에서도 아주 느리게 성장
+  //     this.growth += this.config.growthRate * this.config.baseGrowthSpeed;
+  //     this.growth = min(this.growth, this.config.maxGrowth);
+  //   }
+  // }
   
   // --- Moss 상호작용 ---
-  _handleMoss(mosses) {
-    if (!mosses || mosses.length === 0) return;
+  // _handleMoss(mosses) {
+  //   if (!mosses || mosses.length === 0) return;
     
-    let isTouchingMoss = false;
+  //   let isTouchingMoss = false;
     
-    for (let moss of mosses) {
-      if (moss.checkCollisionWithPlant && moss.checkCollisionWithPlant(this)) {
-        isTouchingMoss = true;
-        break;
-      }
-    }
+  //   for (let moss of mosses) {
+  //     if (moss.checkCollisionWithPlant && moss.checkCollisionWithPlant(this)) {
+  //       isTouchingMoss = true;
+  //       break;
+  //     }
+  //   }
     
-    if (isTouchingMoss) {
-      this.takeDamage(this.config.mossDamagePerFrame);
+  //   if (isTouchingMoss) {
+  //     this.takeDamage(this.config.mossDamagePerFrame);
       
-      // 잎 시들기 시작
-      if (this.health < this.config.maxHealth * 0.5) {
-        for (let leaf of this.leaves) {
-          if (!leaf.isWilting && random() < 0.01) {
-            leaf.startWilting();
-          }
-        }
-      }
-    }
-  }
+  //     // 잎 시들기 시작
+  //     if (this.health < this.config.maxHealth * 0.5) {
+  //       for (let leaf of this.leaves) {
+  //         if (!leaf.isWilting && random() < 0.01) {
+  //           leaf.startWilting();
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
   
-  // --- 체력 회복 ---
-  _handleHealthRegen() {
-    if (this.health >= this.config.maxHealth) return;
+  // // --- 체력 회복 ---
+  // _handleHealthRegen() {
+  //   if (this.health >= this.config.maxHealth) return;
     
-    let regenRate = this.config.healthRegenRate;
-    if (this.isInLight) {
-      regenRate += this.config.healthRegenLightBonus;
-    }
+  //   let regenRate = this.config.healthRegenRate;
+  //   if (this.isInLight) {
+  //     regenRate += this.config.healthRegenLightBonus;
+  //   }
     
-    this.health += regenRate;
-    this.health = min(this.health, this.config.maxHealth);
-  }
+  //   this.health += regenRate;
+  //   this.health = min(this.health, this.config.maxHealth);
+  // }
   
-  // --- 피해 처리 ---
-  takeDamage(amount) {
-    this.health -= amount;
+  // // --- 피해 처리 ---
+  // takeDamage(amount) {
+  //   this.health -= amount;
     
-    if (this.health <= 0) {
-      this.health = 0;
-      this._die();
-    }
-  }
+  //   if (this.health <= 0) {
+  //     this.health = 0;
+  //     this._die();
+  //   }
+  // }
   
-  // --- 죽음 처리 ---
-  _die() {
-    if (this.isDead) return;
+  // // --- 죽음 처리 ---
+  // _die() {
+  //   if (this.isDead) return;
     
-    this.isDead = true;
-    this._spawnDebris();
-  }
+  //   this.isDead = true;
+  //   this._spawnDebris();
+  // }
   
-  // --- 파편 생성 ---
-  _spawnDebris() {
-    let useGray = this.config.grayscaleOnDeath;
+  // // --- 파편 생성 ---
+  // _spawnDebris() {
+  //   let useGray = this.config.grayscaleOnDeath;
     
-    // 잎 → 파편
-    for (let leaf of this.leaves) {
-      let pos = leaf.getAttachPosition();
-      let bounds = leaf.getBounds();
+  //   // 잎 → 파편
+  //   for (let leaf of this.leaves) {
+  //     let pos = leaf.getAttachPosition();
+  //     let bounds = leaf.getBounds();
       
-      this.debris.push(new Debris(
-        leaf.img,
-        pos.x,
-        pos.y,
-        leaf.segment.angle + leaf.baseAngle,
-        {
-          grayscale: useGray,
-          scale: leaf.scale,
-          life: random(100, 160),
-          vx: random(-3, 3) + leaf.side * 1.5,
-          vy: random(-2, 0),
-          width: bounds.w,
-          height: bounds.h
-        }
-      ));
-    }
+  //     this.debris.push(new Debris(
+  //       leaf.img,
+  //       pos.x,
+  //       pos.y,
+  //       leaf.segment.angle + leaf.baseAngle,
+  //       {
+  //         grayscale: useGray,
+  //         scale: leaf.scale,
+  //         life: random(100, 160),
+  //         vx: random(-3, 3) + leaf.side * 1.5,
+  //         vy: random(-2, 0),
+  //         width: bounds.w,
+  //         height: bounds.h
+  //       }
+  //     ));
+  //   }
     
-    // 꽃 → 파편
-    if (this.flower) {
-      let pos = this.flower.getPosition();
-      let bounds = this.flower.getBounds();
+  //   // 꽃 → 파편
+  //   if (this.flower) {
+  //     let pos = this.flower.getPosition();
+  //     let bounds = this.flower.getBounds();
       
-      this.debris.push(new Debris(
-        this.flower.img,
-        pos.x,
-        pos.y,
-        this.flower.segment.angle,
-        {
-          grayscale: useGray,
-          scale: this.flower.scale,
-          life: random(120, 180),
-          vy: random(-4, -1),
-          width: bounds.w,
-          height: bounds.h
-        }
-      ));
-    }
+  //     this.debris.push(new Debris(
+  //       this.flower.img,
+  //       pos.x,
+  //       pos.y,
+  //       this.flower.segment.angle,
+  //       {
+  //         grayscale: useGray,
+  //         scale: this.flower.scale,
+  //         life: random(120, 180),
+  //         vy: random(-4, -1),
+  //         width: bounds.w,
+  //         height: bounds.h
+  //       }
+  //     ));
+  //   }
     
-    // 세그먼트 → 파편 (일부만)
-    for (let i = this.segments.length - 1; i >= 0; i -= 2) {
-      let seg = this.segments[i];
+  //   // 세그먼트 → 파편 (일부만)
+  //   for (let i = this.segments.length - 1; i >= 0; i -= 2) {
+  //     let seg = this.segments[i];
       
-      this.debris.push(new Debris(
-        seg.img,
-        (seg.startX + seg.getRealEndX()) / 2,
-        (seg.startY + seg.getRealEndY()) / 2,
-        seg.angle,
-        {
-          grayscale: useGray,
-          scale: 1.0,
-          life: random(80, 130),
-          vx: random(-2, 2),
-          vy: random(-1, 1),
-          width: 20,
-          height: seg.length
-        }
-      ));
-    }
+  //     this.debris.push(new Debris(
+  //       seg.img,
+  //       (seg.startX + seg.getRealEndX()) / 2,
+  //       (seg.startY + seg.getRealEndY()) / 2,
+  //       seg.angle,
+  //       {
+  //         grayscale: useGray,
+  //         scale: 1.0,
+  //         life: random(80, 130),
+  //         vx: random(-2, 2),
+  //         vy: random(-1, 1),
+  //         width: 20,
+  //         height: seg.length
+  //       }
+  //     ));
+  //   }
     
-    // 구성 요소 제거
-    this.segments = [];
-    this.leaves = [];
-    this.flower = null;
-  }
+  //   // 구성 요소 제거
+  //   this.segments = [];
+  //   this.leaves = [];
+  //   this.flower = null;
+  // }
   
-  // --- 파편 업데이트 ---
-  _updateDebris() {
-    for (let i = this.debris.length - 1; i >= 0; i--) {
-      this.debris[i].update();
-      if (this.debris[i].isDead()) {
-        this.debris.splice(i, 1);
-      }
-    }
-  }
+  // // --- 파편 업데이트 ---
+  // _updateDebris() {
+  //   for (let i = this.debris.length - 1; i >= 0; i--) {
+  //     this.debris[i].update();
+  //     if (this.debris[i].isDead()) {
+  //       this.debris.splice(i, 1);
+  //     }
+  //   }
+  // }
   
-  // --- 성장 업데이트 ---
-  _updateGrowth(lightObj) {
-    if (this.segments.length === 0) return;
+  // // --- 성장 업데이트 ---
+  // _updateGrowth(lightObj) {
+  //   if (this.segments.length === 0) return;
     
-    let lastSeg = this.segments[this.segments.length - 1];
+  //   let lastSeg = this.segments[this.segments.length - 1];
     
-    // 마지막 세그먼트가 자라는 중
-    if (lastSeg.isGrowing) {
-      return;
-    }
+  //   // 마지막 세그먼트가 자라는 중
+  //   if (lastSeg.isGrowing) {
+  //     return;
+  //   }
     
-    // 새 세그먼트 추가 조건
-    if (this.segments.length < this.config.maxSegments) {
-      // growth에 비례하여 세그먼트 추가
-      let targetSegments = floor(this.growth * this.config.maxSegments);
+  //   // 새 세그먼트 추가 조건
+  //   if (this.segments.length < this.config.maxSegments) {
+  //     // growth에 비례하여 세그먼트 추가
+  //     let targetSegments = floor(this.growth * this.config.maxSegments);
       
-      if (this.segments.length < targetSegments) {
-        this._addSegment(lightObj);
-      }
-    }
+  //     if (this.segments.length < targetSegments) {
+  //       this._addSegment(lightObj);
+  //     }
+  //   }
     
-    // 잎 생성 체크
-    this._trySpawnLeaf();
+  //   // 잎 생성 체크
+  //   this._trySpawnLeaf();
     
-    // 꽃 생성 체크
-    this._trySpawnFlower();
-  }
+  //   // 꽃 생성 체크
+  //   this._trySpawnFlower();
+  // }
   
-  // --- 새 세그먼트 추가 ---
-  _addSegment(lightObj) {
-    let lastSeg = this.segments[this.segments.length - 1];
+  // // --- 새 세그먼트 추가 ---
+  // _addSegment(lightObj) {
+  //   let lastSeg = this.segments[this.segments.length - 1];
     
-    // 새 각도 계산
-    let newAngle = lastSeg.angle + random(-this.config.angleVariation, this.config.angleVariation);
+  //   // 새 각도 계산
+  //   let newAngle = lastSeg.angle + random(-this.config.angleVariation, this.config.angleVariation);
     
-    // 빛을 향하는 경향
-    if (lightObj && this.isInLight) {
-      let endX = lastSeg.getRealEndX();
-      let endY = lastSeg.getRealEndY();
-      let angleToLight = degrees(atan2(lightObj.y - endY, lightObj.x - endX));
-      let diff = this._angleDelta(newAngle, angleToLight);
-      newAngle += diff * this.config.lightSeekingStrength;
-    }
+  //   // 빛을 향하는 경향
+  //   if (lightObj && this.isInLight) {
+  //     let endX = lastSeg.getRealEndX();
+  //     let endY = lastSeg.getRealEndY();
+  //     let angleToLight = degrees(atan2(lightObj.y - endY, lightObj.x - endX));
+  //     let diff = this._angleDelta(newAngle, angleToLight);
+  //     newAngle += diff * this.config.lightSeekingStrength;
+  //   }
     
-    // 위쪽 경향 유지
-    let diffToUp = this._angleDelta(newAngle, -90);
-    newAngle += diffToUp * this.config.upwardTendency;
+  //   // 위쪽 경향 유지
+  //   let diffToUp = this._angleDelta(newAngle, -90);
+  //   newAngle += diffToUp * this.config.upwardTendency;
     
-    // 각도 제한
-    newAngle = constrain(newAngle, -160, -20);
+  //   // 각도 제한
+  //   newAngle = constrain(newAngle, -160, -20);
     
-    // 새 세그먼트 생성
-    let stemImg = this._getStemImage();
-    let newSeg = new Segment(
-      lastSeg.getRealEndX(),
-      lastSeg.getRealEndY(),
-      newAngle,
-      1,
-      stemImg,
-      this.segments.length
-    );
-    newSeg.targetLength = this.config.segmentLength;
-    newSeg.sliceY = (this.segments.length * 15) % (stemImg ? stemImg.height - 20 : 100);
+  //   // 새 세그먼트 생성
+  //   let stemImg = this._getStemImage();
+  //   let newSeg = new Segment(
+  //     lastSeg.getRealEndX(),
+  //     lastSeg.getRealEndY(),
+  //     newAngle,
+  //     1,
+  //     stemImg,
+  //     this.segments.length
+  //   );
+  //   newSeg.targetLength = this.config.segmentLength;
+  //   newSeg.sliceY = (this.segments.length * 15) % (stemImg ? stemImg.height - 20 : 100);
     
-    this.segments.push(newSeg);
-  }
+  //   this.segments.push(newSeg);
+  // }
   
-  // --- 잎 생성 ---
-  _trySpawnLeaf() {
-    if (this.leaves.length >= this.config.maxLeaves) return;
-    if (this.segments.length < 3) return;
+  // // --- 잎 생성 ---
+  // _trySpawnLeaf() {
+  //   if (this.leaves.length >= this.config.maxLeaves) return;
+  //   if (this.segments.length < 3) return;
     
-    let interval = this.config.leafSpawnInterval;
-    let expectedLeaves = floor((this.segments.length - 2) / interval);
-    expectedLeaves = min(expectedLeaves, this.config.maxLeaves);
+  //   let interval = this.config.leafSpawnInterval;
+  //   let expectedLeaves = floor((this.segments.length - 2) / interval);
+  //   expectedLeaves = min(expectedLeaves, this.config.maxLeaves);
     
-    if (this.leaves.length < expectedLeaves) {
-      // 새 잎을 붙일 세그먼트 찾기
-      let segIndex = 2 + this.leaves.length * interval;
-      segIndex = min(segIndex, this.segments.length - 1);
+  //   if (this.leaves.length < expectedLeaves) {
+  //     // 새 잎을 붙일 세그먼트 찾기
+  //     let segIndex = 2 + this.leaves.length * interval;
+  //     segIndex = min(segIndex, this.segments.length - 1);
       
-      let seg = this.segments[segIndex];
+  //     let seg = this.segments[segIndex];
       
-      // 좌우 번갈아가며
-      let side = this.leaves.length % 2 === 0 ? 1 : -1;
+  //     // 좌우 번갈아가며
+  //     let side = this.leaves.length % 2 === 0 ? 1 : -1;
       
-      let leafImg = this._getLeafImage();
-      let leafSize = this._getLeafSize();
+  //     let leafImg = this._getLeafImage();
+  //     let leafSize = this._getLeafSize();
       
-      let newLeaf = new Leaf(seg, side, leafImg, leafSize, this.stage);
-      this.leaves.push(newLeaf);
-    }
-  }
+  //     let newLeaf = new Leaf(seg, side, leafImg, leafSize, this.stage);
+  //     this.leaves.push(newLeaf);
+  //   }
+  // }
   
-  // --- 꽃 생성 ---
-  _trySpawnFlower() {
-    if (this.flower) return;
-    if (this.growth < this.config.flowerThreshold) return;
-    if (this.segments.length < 5) return;
+  // // --- 꽃 생성 ---
+  // _trySpawnFlower() {
+  //   if (this.flower) return;
+  //   if (this.growth < this.config.flowerThreshold) return;
+  //   if (this.segments.length < 5) return;
     
-    let lastSeg = this.segments[this.segments.length - 1];
-    let flowerImg = this._getFlowerImage();
-    let flowerSize = this._getFlowerSize();
+  //   let lastSeg = this.segments[this.segments.length - 1];
+  //   let flowerImg = this._getFlowerImage();
+  //   let flowerSize = this._getFlowerSize();
     
-    this.flower = new Flower(lastSeg, flowerImg, flowerSize, this.stage);
-  }
+  //   this.flower = new Flower(lastSeg, flowerImg, flowerSize, this.stage);
+  // }
   
-  // --- 단계 업데이트 ---
-  _updateStage() {
-    let thresholds = this.config.stageThresholds;
-    let newStage = 0;
+  // // --- 단계 업데이트 ---
+  // _updateStage() {
+  //   let thresholds = this.config.stageThresholds;
+  //   let newStage = 0;
     
-    for (let i = thresholds.length - 1; i >= 0; i--) {
-      if (this.growth >= thresholds[i]) {
-        newStage = i;
-        break;
-      }
-    }
+  //   for (let i = thresholds.length - 1; i >= 0; i--) {
+  //     if (this.growth >= thresholds[i]) {
+  //       newStage = i;
+  //       break;
+  //     }
+  //   }
     
-    if (newStage !== this.stage) {
-      this._onStageChange(this.stage, newStage);
-      this.stage = newStage;
-    }
-  }
+  //   if (newStage !== this.stage) {
+  //     this._onStageChange(this.stage, newStage);
+  //     this.stage = newStage;
+  //   }
+  // }
   
-  // --- 단계 변경 처리 ---
-  _onStageChange(oldStage, newStage) {
-    // 잎 이미지 업데이트 (새 단계에 맞게)
-    for (let leaf of this.leaves) {
-      if (leaf.scale > 0.8) {
-        // 이미 다 자란 잎은 새 이미지로, 스케일 조정
-        leaf.img = this._getLeafImage();
-        let newSize = this._getLeafSize();
+  // // --- 단계 변경 처리 ---
+  // _onStageChange(oldStage, newStage) {
+  //   // 잎 이미지 업데이트 (새 단계에 맞게)
+  //   for (let leaf of this.leaves) {
+  //     if (leaf.scale > 0.8) {
+  //       // 이미 다 자란 잎은 새 이미지로, 스케일 조정
+  //       leaf.img = this._getLeafImage();
+  //       let newSize = this._getLeafSize();
         
-        // 크기 비율 유지하며 전환
-        let scaleRatio = leaf.baseHeight / newSize.h;
-        leaf.scale = leaf.scale * scaleRatio * 0.6;
+  //       // 크기 비율 유지하며 전환
+  //       let scaleRatio = leaf.baseHeight / newSize.h;
+  //       leaf.scale = leaf.scale * scaleRatio * 0.6;
         
-        leaf.baseWidth = newSize.w;
-        leaf.baseHeight = newSize.h;
-        leaf.stage = newStage;
-      }
-    }
+  //       leaf.baseWidth = newSize.w;
+  //       leaf.baseHeight = newSize.h;
+  //       leaf.stage = newStage;
+  //     }
+  //   }
     
-    // 꽃 이미지 업데이트
-    if (this.flower && newStage >= 3) {
-      this.flower.img = this._getFlowerImage();
-      let newSize = this._getFlowerSize();
+  //   // 꽃 이미지 업데이트
+  //   if (this.flower && newStage >= 3) {
+  //     this.flower.img = this._getFlowerImage();
+  //     let newSize = this._getFlowerSize();
       
-      let scaleRatio = this.flower.baseHeight / newSize.h;
-      this.flower.scale = this.flower.scale * scaleRatio * 0.5;
+  //     let scaleRatio = this.flower.baseHeight / newSize.h;
+  //     this.flower.scale = this.flower.scale * scaleRatio * 0.5;
       
-      this.flower.baseWidth = newSize.w;
-      this.flower.baseHeight = newSize.h;
-    }
-  }
+  //     this.flower.baseWidth = newSize.w;
+  //     this.flower.baseHeight = newSize.h;
+  //   }
+  // }
   
-  // --- 구성 요소 업데이트 ---
-  _updateComponents(lightObj) {
-    // 세그먼트 체인 업데이트
-    for (let i = 0; i < this.segments.length; i++) {
-      let seg = this.segments[i];
+  // // --- 구성 요소 업데이트 ---
+  // _updateComponents(lightObj) {
+  //   // 세그먼트 체인 업데이트
+  //   for (let i = 0; i < this.segments.length; i++) {
+  //     let seg = this.segments[i];
       
-      if (i === 0) {
-        seg.updateStart(this.x, this.y);
-      } else {
-        let parent = this.segments[i - 1];
-        seg.updateStart(parent.getRealEndX(), parent.getRealEndY());
-      }
+  //     if (i === 0) {
+  //       seg.updateStart(this.x, this.y);
+  //     } else {
+  //       let parent = this.segments[i - 1];
+  //       seg.updateStart(parent.getRealEndX(), parent.getRealEndY());
+  //     }
       
-      seg.update(lightObj, this.config);
-    }
+  //     seg.update(lightObj, this.config);
+  //   }
     
-    // 잎 업데이트
-    for (let leaf of this.leaves) {
-      leaf.update(this.config, this.isInLight);
-    }
+  //   // 잎 업데이트
+  //   for (let leaf of this.leaves) {
+  //     leaf.update(this.config, this.isInLight);
+  //   }
     
-    // 꽃 업데이트
-    if (this.flower) {
-      this.flower.update(this.config, this.isInLight);
-    }
-  }
+  //   // 꽃 업데이트
+  //   if (this.flower) {
+  //     this.flower.update(this.config, this.isInLight);
+  //   }
+  // }
   
-  // --- 히트박스 업데이트 ---
-  _updateHitbox() {
-    if (this.segments.length === 0) {
-      this.w = 30;
-      this.h = 30;
-      this._hitboxCenterX = this.x;
-      this._hitboxCenterY = this.y;
-      return;
-    }
+  // // --- 히트박스 업데이트 ---
+  // _updateHitbox() {
+  //   if (this.segments.length === 0) {
+  //     this.w = 30;
+  //     this.h = 30;
+  //     this._hitboxCenterX = this.x;
+  //     this._hitboxCenterY = this.y;
+  //     return;
+  //   }
     
-    let minX = this.x, maxX = this.x;
-    let minY = this.y, maxY = this.y;
+  //   let minX = this.x, maxX = this.x;
+  //   let minY = this.y, maxY = this.y;
     
-    // 세그먼트 범위
-    for (let seg of this.segments) {
-      let endX = seg.getRealEndX();
-      let endY = seg.getRealEndY();
-      minX = min(minX, seg.startX, endX);
-      maxX = max(maxX, seg.startX, endX);
-      minY = min(minY, seg.startY, endY);
-      maxY = max(maxY, seg.startY, endY);
-    }
+  //   // 세그먼트 범위
+  //   for (let seg of this.segments) {
+  //     let endX = seg.getRealEndX();
+  //     let endY = seg.getRealEndY();
+  //     minX = min(minX, seg.startX, endX);
+  //     maxX = max(maxX, seg.startX, endX);
+  //     minY = min(minY, seg.startY, endY);
+  //     maxY = max(maxY, seg.startY, endY);
+  //   }
     
-    // 잎 범위 추가
-    for (let leaf of this.leaves) {
-      let bounds = leaf.getBounds();
-      minX = min(minX, bounds.x);
-      maxX = max(maxX, bounds.x + bounds.w);
-      minY = min(minY, bounds.y);
-      maxY = max(maxY, bounds.y + bounds.h);
-    }
+  //   // 잎 범위 추가
+  //   for (let leaf of this.leaves) {
+  //     let bounds = leaf.getBounds();
+  //     minX = min(minX, bounds.x);
+  //     maxX = max(maxX, bounds.x + bounds.w);
+  //     minY = min(minY, bounds.y);
+  //     maxY = max(maxY, bounds.y + bounds.h);
+  //   }
     
-    // 여유 추가
-    this.w = (maxX - minX) + 30;
-    this.h = (maxY - minY) + 30;
-    this._hitboxCenterX = (minX + maxX) / 2;
-    this._hitboxCenterY = (minY + maxY) / 2;
-  }
+  //   // 여유 추가
+  //   this.w = (maxX - minX) + 30;
+  //   this.h = (maxY - minY) + 30;
+  //   this._hitboxCenterX = (minX + maxX) / 2;
+  //   this._hitboxCenterY = (minY + maxY) / 2;
+  // }
   
-  // --- 줄기 끝점 ---
-  _getTipPosition() {
-    if (this.segments.length === 0) {
-      return { x: this.x, y: this.y };
-    }
-    let last = this.segments[this.segments.length - 1];
-    return { x: last.getRealEndX(), y: last.getRealEndY() };
-  }
+  // // --- 줄기 끝점 ---
+  // _getTipPosition() {
+  //   if (this.segments.length === 0) {
+  //     return { x: this.x, y: this.y };
+  //   }
+  //   let last = this.segments[this.segments.length - 1];
+  //   return { x: last.getRealEndX(), y: last.getRealEndY() };
+  // }
   
-  // --- 에셋 헬퍼 ---
-  _getStemImage() {
-    if (!this.images.stems || this.images.stems.length === 0) return null;
-    let idx = min(this.stage, this.images.stems.length - 1);
-    return this.images.stems[idx];
-  }
+  // // --- 에셋 헬퍼 ---
+  // _getStemImage() {
+  //   if (!this.images.stems || this.images.stems.length === 0) return null;
+  //   let idx = min(this.stage, this.images.stems.length - 1);
+  //   return this.images.stems[idx];
+  // }
   
-  _getLeafImage() {
-    if (!this.images.leaves || this.images.leaves.length === 0) return null;
-    let idx = min(this.stage, this.images.leaves.length - 1);
-    return this.images.leaves[idx];
-  }
+  // _getLeafImage() {
+  //   if (!this.images.leaves || this.images.leaves.length === 0) return null;
+  //   let idx = min(this.stage, this.images.leaves.length - 1);
+  //   return this.images.leaves[idx];
+  // }
   
-  _getLeafSize() {
-    let idx = min(this.stage, ASSET_SIZES.leaves.length - 1);
-    return ASSET_SIZES.leaves[idx];
-  }
+  // _getLeafSize() {
+  //   let idx = min(this.stage, ASSET_SIZES.leaves.length - 1);
+  //   return ASSET_SIZES.leaves[idx];
+  // }
   
-  _getFlowerImage() {
-    if (!this.images.flowers || this.images.flowers.length === 0) return null;
-    let idx = this.stage >= 3 ? min(1, this.images.flowers.length - 1) : 0;
-    return this.images.flowers[idx];
-  }
+  // _getFlowerImage() {
+  //   if (!this.images.flowers || this.images.flowers.length === 0) return null;
+  //   let idx = this.stage >= 3 ? min(1, this.images.flowers.length - 1) : 0;
+  //   return this.images.flowers[idx];
+  // }
   
-  _getFlowerSize() {
-    let idx = this.stage >= 3 ? 1 : 0;
-    idx = min(idx, ASSET_SIZES.flowers.length - 1);
-    return ASSET_SIZES.flowers[idx];
-  }
+  // _getFlowerSize() {
+  //   let idx = this.stage >= 3 ? 1 : 0;
+  //   idx = min(idx, ASSET_SIZES.flowers.length - 1);
+  //   return ASSET_SIZES.flowers[idx];
+  // }
   
-  // --- Moss에서 호출하는 충돌 체크 ---
   checkCollision(target) {
+  // --- Moss에서 호출하는 충돌 체크 ---
+  // sketch.js에서 ex. myPlant.checkCollision(myMoss)로 사용
+
     if (!target || this.isDead) return false;
     
     let centerX = this._hitboxCenterX;
@@ -1210,18 +1209,182 @@ class Plant {
     // 원-사각형 충돌
     let closestX = constrain(targetX, centerX - this.w / 2, centerX + this.w / 2);
     let closestY = constrain(targetY, centerY - this.h / 2, centerY + this.h / 2);
-    
     let d = dist(targetX, targetY, closestX, closestY);
     return d < targetR;
   }
+
+  takeDamage(amount) {
+    if (this.isDead) return;
+    this.health -= amount;
+    
+    // 체력 절반 이하일 때 잎 시들기 효과 (랜덤)
+    if (this.health < this.config.maxHealth * 0.5 && this.leaves.length > 0) {
+       if (random() < 0.1) this.leaves[floor(random(this.leaves.length))].isWilting = true;
+    }
+
+    if (this.health <= 0) {
+      this.health = 0;
+      this._die();
+    }
+  }
+
+  // ============================================
+  // 내부 로직
+  // ============================================
+  _handleGrowth(lightObj) {
+    let speed = this.isInLight ? this.config.growthRate * 2.5 : this.config.growthRate * 0.3;
+    this.growth = min(this.growth + speed, 1.0);
+
+    // 단계 업데이트 (이미지 변경용)
+    // 0.25, 0.55를 넘을 때마다 이미지를 갈아끼움
+    let oldStage = this.stage;
+    if (this.growth > 0.55) this.stage = 2; // 최종
+    else if (this.growth > 0.25) this.stage = 1; // 중간
+    else this.stage = 0; // 초기
+
+    // 단계가 변했다면, 현재 달려있는 모든 부품의 이미지를 업데이트!
+    if (this.stage !== oldStage) {
+      this._updateImagesToStage();
+    }
+    
+    // 줄기 추가
+    let maxSegsCurrent = floor(this.growth * this.config.maxSegments);
+    if (this.segments.length < maxSegsCurrent) {
+      this._addSegment(lightObj);
+    }
+
+    this._trySpawnLeaf();
+    this._trySpawnFlower();
+  }
+
+  _updateImagesToStage() {
+    let stemImg = this._getCurrentImage(this.images.stems);
+    let leafImg = this._getCurrentImage(this.images.leaves);
+    
+    // 줄기 이미지 교체
+    for(let s of this.segments) {
+        if(stemImg) s.img = stemImg;
+    }
+    // 잎 이미지 교체
+    for(let l of this.leaves) {
+        if(leafImg) l.img = leafImg;
+    }
+    // 꽃 이미지 교체 (꽃은 최종 단계 근처에서만 나오므로 단순 처리)
+    if (this.flower) {
+        this.flower.img = this._getCurrentImage(this.images.flowers);
+    }
+  }
+
+  _addSegment(lightObj) {
+    let last = this.segments[this.segments.length - 1];
+    let newAngle = last.angle + random(-20, 20);
+
+    if (lightObj && this.isInLight) {
+      let endX = last.getEndX();
+      let endY = last.getEndY();
+      let angleToLight = degrees(atan2(lightObj.y - endY, lightObj.x - endX));
+      // 여기서 _angleDelta 사용
+      let diff = this._angleDelta(newAngle, angleToLight);
+      newAngle += diff * this.config.lightSeekingStrength;
+    }
+    
+    // 위쪽(-90도)으로 자라려는 성질
+    let toUp = this._angleDelta(newAngle, -90);
+    newAngle += toUp * 0.1;
+    newAngle = constrain(newAngle, -170, -10);
+
+    let img = this._getCurrentImage(this.images.stems);
+    let newSeg = new Segment(last.getEndX(), last.getEndY(), newAngle, 1, img);
+    newSeg.targetLength = this.config.segmentLength;
+    this.segments.push(newSeg);
+  }
+
+  _trySpawnLeaf() {
+    let requiredSegments = (this.leaves.length + 1) * this.config.leafSpawnInterval + 2;
+    if (this.segments.length >= requiredSegments) {
+        let seg = this.segments[this.segments.length - 2]; 
+        let dir = (this.leaves.length % 2 === 0) ? 1 : -1;
+        let img = this._getCurrentImage(this.images.leaves);
+        this.leaves.push(new Leaf(seg, dir, img));
+    }
+  }
+
+  _trySpawnFlower() {
+    if (!this.flower && this.growth > this.config.flowerThreshold) {
+      let lastSeg = this.segments[this.segments.length - 1];
+      let img = this._getCurrentImage(this.images.flowers);
+      this.flower = new Flower(lastSeg, img);
+    }
+  }
+
+  _die() {
+    this.isDead = true;
+    // 파편 생성
+    for(let s of this.segments) this.debris.push(new Debris(s.img, s.startX, s.startY));
+    for(let l of this.leaves) this.debris.push(new Debris(l.img, l.getPos().x, l.getPos().y));
+    if (this.flower) this.debris.push(new Debris(this.flower.img, this.flower.getPos().x, this.flower.getPos().y));
+    
+    this.segments = []; this.leaves = []; this.flower = null;
+  }
+
+  _updateComponents() {
+    for (let i = 0; i < this.segments.length; i++) {
+        if (i > 0) {
+            let parent = this.segments[i-1];
+            this.segments[i].updateStart(parent.getEndX(), parent.getEndY());
+        }
+        this.segments[i].update();
+    }
+    for (let l of this.leaves) l.update(this.isInLight);
+    if (this.flower) this.flower.update(this.isInLight);
+  }
+
+  _updateDebris() {
+    for (let i = this.debris.length - 1; i >= 0; i--) {
+      this.debris[i].update();
+      if (this.debris[i].isDead()) this.debris.splice(i, 1);
+    }
+  }
+
+  _updateHitbox() {
+    if (this.segments.length === 0) return;
+    let minX = this.x, maxX = this.x, minY = this.y, maxY = this.y;
+    
+    for (let s of this.segments) {
+        let ex = s.getEndX(); let ey = s.getEndY();
+        if(ex < minX) minX = ex; if(ex > maxX) maxX = ex;
+        if(ey < minY) minY = ey; if(ey > maxY) maxY = ey;
+    }
+
+    this.w = (maxX - minX) + 40;
+    this.h = (maxY - minY) + 40;
+    this._hitboxCenterX = (minX + maxX) / 2;
+    this._hitboxCenterY = (minY + maxY) / 2;
+  }
+
+  _checkInLight(lightObj) {
+    if (!lightObj) return false;
+    let last = this.segments[this.segments.length - 1];
+    if (!last) return false;
+    return dist(last.getEndX(), last.getEndY(), lightObj.x, lightObj.y) < lightObj.r;
+  }
+
+_getCurrentImage(arr) {
+    if (!arr || arr.length === 0) return null;
+    // this.stage가 배열 길이를 넘지 않도록 안전장치
+    let idx = min(this.stage, arr.length - 1);
+    return arr[idx];
+  }
   
-  // --- 유틸리티 ---
+  // ============================================
+  // 유틸리티 & 디버그
+  // ============================================
+  
   _angleDelta(from, to) {
     let d = (to - from + 540) % 360 - 180;
     return d;
   }
-  
-  // --- 디버그 렌더링 ---
+
   _drawDebug() {
     push();
     
@@ -1247,56 +1410,98 @@ class Plant {
     let infoY = this._hitboxCenterY - 50;
     
     text(`Growth: ${(this.growth * 100).toFixed(1)}%`, infoX, infoY);
-    text(`Stage: ${this.stage}`, infoX, infoY + 14);
     text(`HP: ${this.health.toFixed(1)}/${this.config.maxHealth}`, infoX, infoY + 28);
-    text(`Segs: ${this.segments.length}`, infoX, infoY + 42);
-    text(`Leaves: ${this.leaves.length}`, infoX, infoY + 56);
     text(`Light: ${this.isInLight ? 'YES' : 'NO'}`, infoX, infoY + 70);
     
     pop();
   }
-  
-  // --- 외부 인터페이스 (MockPlant 호환) ---
-  get hitbox() {
-    return {
-      x: this._hitboxCenterX,
-      y: this._hitboxCenterY,
-      w: this.w,
-      h: this.h
-    };
+
+
+
+  // --- 유틸리티 ---
+  _angleDelta(from, to) {
+    let d = (to - from + 540) % 360 - 180;
+    return d;
   }
+
+
+  
+//   // --- 디버그 렌더링 ---
+//   _drawDebug() {
+//     push();
+    
+//     // 히트박스
+//     noFill();
+//     stroke(255, 0, 0, 150);
+//     strokeWeight(1);
+//     rectMode(CENTER);
+//     rect(this._hitboxCenterX, this._hitboxCenterY, this.w, this.h);
+    
+//     // 뿌리 위치
+//     fill(255, 0, 255);
+//     noStroke();
+//     circle(this.x, this.y, 8);
+    
+//     // 정보 텍스트
+//     fill(255, 255, 0);
+//     noStroke();
+//     textSize(11);
+//     textAlign(LEFT, TOP);
+    
+//     let infoX = this.x + this.w / 2 + 10;
+//     let infoY = this._hitboxCenterY - 50;
+    
+//     text(`Growth: ${(this.growth * 100).toFixed(1)}%`, infoX, infoY);
+//     text(`Stage: ${this.stage}`, infoX, infoY + 14);
+//     text(`HP: ${this.health.toFixed(1)}/${this.config.maxHealth}`, infoX, infoY + 28);
+//     text(`Segs: ${this.segments.length}`, infoX, infoY + 42);
+//     text(`Leaves: ${this.leaves.length}`, infoX, infoY + 56);
+//     text(`Light: ${this.isInLight ? 'YES' : 'NO'}`, infoX, infoY + 70);
+    
+//     pop();
+//   }
+  
+//   // --- 외부 인터페이스 (MockPlant 호환) ---
+//   get hitbox() {
+//     return {
+//       x: this._hitboxCenterX,
+//       y: this._hitboxCenterY,
+//       w: this.w,
+//       h: this.h
+//     };
+//   }
 }
 
 
 // 이미지 로딩 헬퍼
 
-function loadPlantAssets() {
-  let assets = {
-    stems: [],
-    leaves: [],
-    flowers: []
-  };
+// function loadPlantAssets() {
+//   let assets = {
+//     stems: [],
+//     leaves: [],
+//     flowers: []
+//   };
   
-  for (let path of PLANT_ASSETS.stems) {
-    assets.stems.push(loadImage(path, 
-      () => console.log(`Loaded: ${path}`),
-      () => console.warn(`Failed to load: ${path}`)
-    ));
-  }
+//   for (let path of PLANT_ASSETS.stems) {
+//     assets.stems.push(loadImage(path, 
+//       () => console.log(`Loaded: ${path}`),
+//       () => console.warn(`Failed to load: ${path}`)
+//     ));
+//   }
   
-  for (let path of PLANT_ASSETS.leaves) {
-    assets.leaves.push(loadImage(path,
-      () => console.log(`Loaded: ${path}`),
-      () => console.warn(`Failed to load: ${path}`)
-    ));
-  }
+//   for (let path of PLANT_ASSETS.leaves) {
+//     assets.leaves.push(loadImage(path,
+//       () => console.log(`Loaded: ${path}`),
+//       () => console.warn(`Failed to load: ${path}`)
+//     ));
+//   }
   
-  for (let path of PLANT_ASSETS.flowers) {
-    assets.flowers.push(loadImage(path,
-      () => console.log(`Loaded: ${path}`),
-      () => console.warn(`Failed to load: ${path}`)
-    ));
-  }
+//   for (let path of PLANT_ASSETS.flowers) {
+//     assets.flowers.push(loadImage(path,
+//       () => console.log(`Loaded: ${path}`),
+//       () => console.warn(`Failed to load: ${path}`)
+//     ));
+//   }
   
-  return assets;
-}
+//   return assets;
+// }
