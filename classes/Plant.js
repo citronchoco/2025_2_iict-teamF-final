@@ -699,7 +699,8 @@ class Plant {
       this.y,
       -90 + random(-10, 10),
       5,
-      stemImg
+      stemImg,
+      0
     );
     firstSeg.targetLength = this.config.segmentLength;
     this.segments.push(firstSeg);
