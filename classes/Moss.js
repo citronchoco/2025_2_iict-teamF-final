@@ -148,13 +148,6 @@ class Moss {
         this.trySpawn();
       }
     }
-
-    // 아래 코드는 예전 분기 로직으로, 위에서 이미 분기를 처리하고 있기 때문에
-    // 그대로 두면 분기 호출이 중복됨. 필요 없다면 삭제하거나 주석 처리하는 것이 바람직함
-    if (frameCount - this.lastSpawnFrame > this.spawnInterval) {
-      this.lastSpawnFrame = frameCount;
-      this.trySpawn();
-    }
   }
 
   trySpawn() {
