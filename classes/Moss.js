@@ -90,6 +90,27 @@ class Moss {
       // dying/alpha 감소는 sketch.js 쪽에서 처리
     }
 
+    // 시간대에 따른 분기 배율
+    let spawnMultiplier = 1.0;
+    if (timePhase === 1) {
+      // 낮: 아예 새 이끼 안 생김
+      spawnMultiplier = 0.0;
+    } else if (timePhase === 0 || timePhase === 2) {
+      // 새벽/황혼: 밤의 절반 속도로 분기
+      spawnMultiplier = 0.5;
+    } else if (timePhase === 3) {
+      // 밤: 정상
+      spawnMultiplier = 1.0;
+  }
+
+  if (spawnMultiplier > 0) {
+    if (frameCount - this.lastSpawnFrame > this.spawnInterval / spawnMultiplier) {
+      this.lastSpawnFrame = frameCount;
+      this.trySpawn();
+    }
+  } 
+
+
     if (frameCount - this.lastSpawnFrame > this.spawnInterval) {
       this.lastSpawnFrame = frameCount;
       this.trySpawn();
