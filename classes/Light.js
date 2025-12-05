@@ -31,7 +31,7 @@ class Light {
       tint(255, 200); // 약간 투명하게
       // 텍스처가 배열로 들어오는 경우를 대비해 안전장치 (0번 인덱스 사용)
       let img = Array.isArray(this.texture) ? this.texture[0] : this.texture;
-      if(img) image(img, this.x, this.y, 100, 100);
+      if(img) image(img, this.x, this.y, 200, 200);
     }
 
     // 2. 파티클 시스템 실행 (주변 확산 효과)
