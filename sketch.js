@@ -1,10 +1,12 @@
-// sketch.js
+let hudBg, startBg, tutorialBg, overBg;
+let whiteObliqueFont; 
+let tutorialTitle, tutorialDescript, overDescript;
 
 let plantAssets = { stems: [], leaves: [], flowers: [] };
 let mossImages = [];
 let lightImage = []; 
 
-const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2 };
+const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2, TUTORIAL: 3 };
 
 // 설정값
 const CFG = {
@@ -46,6 +48,14 @@ function preload() {
   mossImages.push(loadImage('./assets/moss/moss_a.png'));
   mossImages.push(loadImage('./assets/moss/moss_b.png'));
   lightImage.push(loadImage('./assets/light/light_a.png'));
+
+  // UI 및 배경 리소스 로드 (제공해주신 파일 경로 기반)
+  hudBg = loadImage('./assets/background/tthree.jpg');
+  startBg = loadImage('./assets/background/tone.jpg');
+  tutorialBg = loadImage('./assets/background/ttwo.jpg');
+  overBg = loadImage('./assets/background/tfour.jpg');
+  
+  whiteObliqueFont = loadFont('./assets/font/LeferiPointWhiteOblique.ttf');
 }
 
 function setup() {
@@ -76,14 +86,19 @@ function initGame() {
 
 function draw() {
   // 배경 그리기
-  if (currentState === GAME_STATE.PLAY) updateTimeCycle();
-  else if (currentState === GAME_STATE.TITLE) background(200);
-  else background(0);
+  // if (currentState === GAME_STATE.PLAY) updateTimeCycle();
+  // else if (currentState === GAME_STATE.TITLE) background(200);
+  // else background(0);
 
+  console.log(currentState)
   // 상태별 로직 실행
   switch (currentState) {
-    case GAME_STATE.TITLE: drawTitleScreen(); break;
-    case GAME_STATE.PLAY:  runGameLogic(); break;
+    case GAME_STATE.TITLE: drawStartScreen(); break;
+    case GAME_STATE.TUTORIAL: drawTutorialScreen(); break;
+    case GAME_STATE.PLAY: 
+      updateTimeCycle(); 
+      runGameLogic(); 
+      break;
     case GAME_STATE.ENDING: drawEndingScreen(); break;
   }
 
@@ -227,27 +242,119 @@ function processRegrowthQueue() {
 }
 
 // UI 함수들
-function drawTitleScreen() {
+function drawStartScreen() {
+  image(startBg, 0, 0, 1024, 768);
+  stroke(255);
+
+  // 폰트 및 텍스트 설정
+  textFont(whiteObliqueFont);
+  strokeWeight(1);
+  fill(255);
+  textSize(30);
   textAlign(CENTER, CENTER);
-  fill(0); textSize(40); text("OVERGROWN", width/2, height/2 - 20);
-  fill(frameCount % 60 < 30 ? 50 : 150); textSize(16); text("Click to Start", width/2, height/2 + 50);
+  text(`START`, 345, 550);
+  text(`TUTORIAL`, 679, 550);
+  textSize(60);
+  text(`빛과 그림자의 정원`, 512, 300);
+
+  // 마우스 오버 효과 계산
+  let mouseOverStart = pow(mouseX - 345, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
+  let mouseOverTutorial = pow(mouseX - 679, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
+
+  if(mouseOverStart < 1) {
+    noStroke();
+    fill(220, 220, 220, 100);
+    ellipse(345, 555, 220, 70);
+  }
+  if(mouseOverTutorial < 1) {
+    noStroke();
+    fill(220, 220, 220, 100);
+    ellipse(679, 555, 220, 70);
+  }
 }
 
+function drawTutorialScreen() {
+  image(tutorialBg, 0, 0, 1024, 768);
+
+  tutorialTitle = `빛과 그림자의 정원`;
+  tutorialDescript = `40초마다 새벽-낮-황혼-밤 순으로 시간이 흘러갑니다.\n 마우스를 통해 다양한 식물을 조종해 자유롭게 정원을 꾸밀 수 있습니다.\n 밤 시간에는 조종이 불가하며 이끼가 랜덤하게 생성됩니다.\n 중간에 언제든지 스페이스바를 눌러 정원의 모습을 저장하실 수 있습니다.`;
+  
+  textFont(whiteObliqueFont);
+  textAlign(CENTER, CENTER);
+  strokeWeight(3);
+  fill(255);
+  textSize(20);
+  textLeading(30);
+  text(tutorialTitle, 512, 120);
+  strokeWeight(1);
+  textSize(25);
+  textLeading(70);
+  text(tutorialDescript, 512, 350);
+  textSize(30);
+  text(`START`, 512, 600);
+
+  // 튜토리얼 화면 내 START 버튼 마우스 오버
+  let mouseOverStart2 = pow(mouseX - 512, 2) / pow(110, 2) + pow(mouseY - 605, 2) / pow(35, 2);
+  if(mouseOverStart2 < 1) {
+    noStroke();
+    fill(220, 220, 220, 100);
+    ellipse(512, 605, 220, 70);
+  }
+}
+
+// function drawTitleScreen() {
+//   textAlign(CENTER, CENTER);
+//   fill(0); textSize(40); text("OVERGROWN", width/2, height/2 - 20);
+//   fill(frameCount % 60 < 30 ? 50 : 150); textSize(16); text("Click to Start", width/2, height/2 + 50);
+// }
+
 function drawEndingScreen() {
-  fill(255); textAlign(CENTER, CENTER); textSize(32); text("ENDING", width/2, height/2 - 30);
-  fill(frameCount % 60 < 30 ? 255 : 150); textSize(16); text("Press 'R' to Return", width/2, height/2 + 30);
+  image(overBg, 0, 0, 1024, 768);
+  
+  overDescript = `PRESS    R    TO RESTART`;
+  
+  textSize(40);
+  fill(255);
+  textFont(whiteObliqueFont);
+  textAlign(CENTER, CENTER);
+  text(overDescript, 512, 384);
+
+  fill(220, 220, 220, 100);
+  stroke(235, 217, 148);
+  ellipse(449, 391, 90, 90);
 }
 
 function mousePressed() {
+  // 1. TITLE 화면에서의 클릭 처리
   if (currentState === GAME_STATE.TITLE) {
-    initGame();
-    currentState = GAME_STATE.PLAY;
+    // START 버튼 판정
+    let checkStart = pow(mouseX - 345, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
+    // TUTORIAL 버튼 판정
+    let checkTutorial = pow(mouseX - 679, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
+
+    if (checkStart < 1) {
+      initGame();
+      currentState = GAME_STATE.PLAY;
+    } else if (checkTutorial < 1) {
+      currentState = GAME_STATE.TUTORIAL;
+    }
+  }
+  // 2. TUTORIAL 화면에서의 클릭 처리 (START 버튼 하나)
+  else if (currentState === GAME_STATE.TUTORIAL) {
+    let checkStart2 = pow(mouseX - 512, 2) / pow(110, 2) + pow(mouseY - 605, 2) / pow(35, 2);
+    if (checkStart2 < 1) {
+      initGame();
+      currentState = GAME_STATE.PLAY;
+    }
   }
 }
 
 function keyPressed() {
   if (key === 'd' || key === 'D') debugMode = !debugMode;
-  if (currentState === GAME_STATE.ENDING && (key === 'r' || key === 'R')) currentState = GAME_STATE.TITLE;
+  if (currentState === GAME_STATE.ENDING && keyCode===82) {
+    currentState = GAME_STATE.TITLE;
+    console.log(key);
+  }
 }
 
 function drawDebugInfo() {
