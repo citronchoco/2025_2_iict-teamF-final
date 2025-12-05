@@ -123,7 +123,7 @@ function runGameLogic() {
     // 이끼 성장 및 화면 갱신
     m.update(lightObj, (x, y, light) => dist(x, y, light.x, light.y) < (light.r || 100));
 
-    // ★ 빛에 닿으면 서서히 사라지도록 처리
+    // 빛에 닿으면 서서히 사라지도록 처리
     for (let j = m.points.length - 1; j >= 0; j--) {
       let p = m.points[j];
       let d = dist(p.pos.x, p.pos.y, lightObj.x, lightObj.y);
@@ -364,6 +364,7 @@ function drawDebugInfo() {
   text(`Plants: ${plants.length}`, 10, 30);
   text(`GameTime: ${gameTime}`, 10, 50);
   text(`SafeMode: ${gameTime < CFG.SAFE_TIME ? "ON" : "OFF"}`, 10, 70);
+  text(`TimePhase: ${timePhase}`, 10, 90);
 
   // 식물 위치 강제 표시 (식물이 투명한지 확인용)
   for(let p of plants) {
