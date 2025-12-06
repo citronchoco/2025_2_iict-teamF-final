@@ -2,19 +2,35 @@ let hudBg, startBg, tutorialBg, overBg;
 let whiteObliqueFont; 
 let tutorialTitle, tutorialDescript, overDescript;
 
+
+
+
+
 let plantAssets = { stems: [], leaves: [], flowers: [] };
 let mossImages = [];
 let lightImage = []; 
 
+
+
+
+
 const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2, TUTORIAL: 3 };
+
+
+
+
 
 // 설정값
 const CFG = {
   PLANT_COUNT: 15,       // 식물 15개
-  MOSS_COUNT: 50,       // 이끼 50개
-  DAY_DURATION: 2400,   // 하루 길이
-  SAFE_TIME: 300        // 게임 시작 후 5초(300프레임) 동안 무적
+  MOSS_COUNT: 50,        // 이끼 50개
+  DAY_DURATION: 2400,    // 하루 길이
+  SAFE_TIME: 300         // 게임 시작 후 5초(300프레임) 동안 무적
 };
+
+
+
+
 
 // 상태 변수
 let currentState = GAME_STATE.TITLE;
@@ -22,12 +38,20 @@ let debugMode = false;
 let gameTime = 0;
 let timePhase = 0;
 
+
+
+
+
 // 오브젝트
 let plants = [];
 let mosses = [];
 let lightObj;
 let regrowthQueue = []; 
 let mossStartPositions = []; 
+
+
+
+
 
 function preload() {
   // 식물 이미지 로드
@@ -58,11 +82,19 @@ function preload() {
   whiteObliqueFont = loadFont('./assets/font/LeferiPointWhiteOblique.ttf');
 }
 
+
+
+
+
 function setup() {
   createCanvas(1024, 768);
   frameRate(60);
   initGame();
 }
+
+
+
+
 
 function initGame() {
   // 1. 변수 초기화
@@ -83,6 +115,10 @@ function initGame() {
   
   console.log("Game Initialized: Plants created ->", plants.length);
 }
+
+
+
+
 
 function draw() {
   // 배경 그리기
@@ -106,7 +142,57 @@ function draw() {
   if (debugMode) drawDebugInfo();
 }
 
+
+
+
+
+// 화면에서 이끼가 차지하는 대략적인 비율 계산함
+function getMossCoverageRatio() {
+  let cols = 40;
+  let rows = 30;
+  let covered = 0;
+  let total = cols * rows;
+
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      let x = map(i + 0.5, 0, cols, 0, width);
+      let y = map(j + 0.5, 0, rows, 0, height);
+
+      let isCovered = false;
+
+      for (let m of mosses) {
+        for (let p of m.points) {
+          let size = p.baseSize * Math.sqrt(p.progress);
+          let r = size / 2;
+          let d = dist(x, y, p.pos.x, p.pos.y);
+          if (d <= r) {
+            isCovered = true;
+            break;
+          }
+        }
+        if (isCovered) break;
+      }
+
+      if (isCovered) covered++;
+    }
+  }
+
+  return covered / total;
+}
+
+
+
+
+
 function runGameLogic() {
+  // --- 0. 이끼 커버리지 계산 및 폭주 모드 여부 결정 ---
+  let coverage = getMossCoverageRatio();
+  // 예시: 화면의 40% 이상을 덮으면 폭주 모드로 전환함
+  let overgrowMode = coverage > 0.4;
+
+  // 디버그용 로그 출력 (coverage, overgrowMode, timePhase 확인용)
+  console.log('coverage:', coverage.toFixed(3), 'overgrowMode:', overgrowMode, 'timePhase:', timePhase);
+
   // --- 1. 플레이어(Light) 업데이트 ---
   lightObj.update();
 
@@ -121,7 +207,12 @@ function runGameLogic() {
     let m = mosses[i];
 
     // 이끼 성장 및 화면 갱신
-    m.update(lightObj, (x, y, light) => dist(x, y, light.x, light.y) < (light.r || 100));
+    // overgrowMode를 세 번째 인자로 넘겨 폭주 모드 여부를 전달함
+    m.update(
+      lightObj, 
+      (x, y, light) => dist(x, y, light.x, light.y) < (light.r || 100),
+      overgrowMode
+    );
 
     // 빛에 닿으면 서서히 사라지도록 처리
     for (let j = m.points.length - 1; j >= 0; j--) {
@@ -164,7 +255,18 @@ function runGameLogic() {
 
   // --- 4. 이끼 재생성 큐 처리 ---
   processRegrowthQueue();
+
+  // 이끼가 화면을 거의 다 덮었으면 엔딩 상태로 전환하는 트리거를 추가할 수도 있음
+  // 예: coverage가 0.95 이상이면 게임 오버 처리
+  if (coverage > 0.95 && currentState === GAME_STATE.PLAY) {
+    currentState = GAME_STATE.ENDING;
+  }
 }
+
+
+
+
+
 
 // 배경 시간 흐름
 function updateTimeCycle() {
@@ -186,7 +288,15 @@ function updateTimeCycle() {
   background(lerpColor(colors[timePhase], colors[nextPhase], localT));
 }
 
+
+
+
+
 // Helper Functions
+
+
+
+
 
 function spawnPlants() {
   let spacing = width / (CFG.PLANT_COUNT + 1);
@@ -194,6 +304,10 @@ function spawnPlants() {
     plants.push(new Plant(i * spacing, height -10, plantAssets));
   }
 }
+
+
+
+
 
 function spawnInitialMosses() {
   for (let i = 0; i < CFG.MOSS_COUNT; i++) {
@@ -216,6 +330,10 @@ function spawnInitialMosses() {
   }
 }
 
+
+
+
+
 function getEdgePosition() {
   let edge = floor(random(4));
   let m = 20; 
@@ -225,12 +343,20 @@ function getEdgePosition() {
   return createVector(m, random(m, height-m)); // 좌
 }
 
+
+
+
+
 function scheduleRegrowth(pos) {
   regrowthQueue.push({
     pos: pos.copy(),
     time: frameCount + 180 // 3초 후 재생성
   });
 }
+
+
+
+
 
 function processRegrowthQueue() {
   for (let i = regrowthQueue.length - 1; i >= 0; i--) {
@@ -240,6 +366,10 @@ function processRegrowthQueue() {
     }
   }
 }
+
+
+
+
 
 // UI 함수들
 function drawStartScreen() {
@@ -273,6 +403,10 @@ function drawStartScreen() {
   }
 }
 
+
+
+
+
 function drawTutorialScreen() {
   image(tutorialBg, 0, 0, 1024, 768);
 
@@ -302,11 +436,19 @@ function drawTutorialScreen() {
   }
 }
 
+
+
+
+
 // function drawTitleScreen() {
 //   textAlign(CENTER, CENTER);
 //   fill(0); textSize(40); text("OVERGROWN", width/2, height/2 - 20);
 //   fill(frameCount % 60 < 30 ? 50 : 150); textSize(16); text("Click to Start", width/2, height/2 + 50);
 // }
+
+
+
+
 
 function drawEndingScreen() {
   image(overBg, 0, 0, 1024, 768);
@@ -323,6 +465,10 @@ function drawEndingScreen() {
   stroke(235, 217, 148);
   ellipse(449, 391, 90, 90);
 }
+
+
+
+
 
 function mousePressed() {
   // 1. TITLE 화면에서의 클릭 처리
@@ -349,6 +495,10 @@ function mousePressed() {
   }
 }
 
+
+
+
+
 function keyPressed() {
   if (key === 'd' || key === 'D') debugMode = !debugMode;
   if (currentState === GAME_STATE.ENDING && keyCode===82) {
@@ -356,6 +506,10 @@ function keyPressed() {
     console.log(key);
   }
 }
+
+
+
+
 
 function drawDebugInfo() {
   // 디버그 모드에서만 보이는 정보

@@ -56,6 +56,8 @@ class Moss {
     this.isInLightRange = null;
   }
 
+
+
   addPoint(pos, generation) {
     // 이끼 패치의 기본 크기를 두 가지 중 하나로 랜덤 선택함
     let sizeOptions = [60, 100];
@@ -84,10 +86,15 @@ class Moss {
     this.points.push(p);
   }
 
-  update(lightObj, isInLightRange) {
+
+
+  // overgrowMode는 화면을 많이 덮었을 때 폭주 모드 여부를 나타내는 플래그임
+  update(lightObj, isInLightRange, overgrowMode = false) {
     // 현재 프레임에서 사용할 빛 오브젝트와 "빛 범위 안인지" 판정 함수를 저장함
     this.lightObj = lightObj;
     this.isInLightRange = isInLightRange;
+    // 폭주 모드 상태를 저장함
+    this.overgrowMode = overgrowMode;
     
     // 이끼 덩어리 전체 생애 진행도를 lifeSpeed만큼 증가시키고 0~1 범위로 제한함
     this.lifeProgress = constrain(this.lifeProgress + this.lifeSpeed, 0, 1);
@@ -111,6 +118,12 @@ class Moss {
     } else if (timePhase === 3) {
       // 밤에는 정상 속도로 자라도록 1.0을 사용함
       growthMultiplier = 1.0;
+    }
+
+    // overgrowMode가 켜졌을 때 성장 속도를 추가로 가속함
+    if (overgrowMode) {
+      // 예: 성장 속도를 6배로 가속함
+      growthMultiplier *= 6.0;
     }
 
     // 이끼 패치 각각에 대해 성장과 애니메이션을 갱신함
@@ -139,16 +152,24 @@ class Moss {
       spawnMultiplier = 1.0;
     }
 
+    // overgrowMode가 켜졌을 때 분기 속도도 추가로 가속함
+    if (overgrowMode) {
+      // 예: 분기 빈도를 3배로 가속함
+      spawnMultiplier *= 3.0;
+    }
+
     // spawnMultiplier가 0보다 클 때(새 패치를 허용할 때)만 분기를 시도함
     if (spawnMultiplier > 0) {
       // spawnInterval을 spawnMultiplier로 나누어
-      // 시간대에 따라 분기 시도 간격을 늘리거나 줄이는 효과를 만듦
+      // 시간대와 폭주 모드에 따라 분기 시도 간격을 늘리거나 줄이는 효과를 만듦
       if (frameCount - this.lastSpawnFrame > this.spawnInterval / spawnMultiplier) {
         this.lastSpawnFrame = frameCount;
         this.trySpawn();
       }
     }
   }
+
+
 
   trySpawn() {
     // 이미 최대 패치 수에 도달했다면 더 이상 분기하지 않음
@@ -184,7 +205,14 @@ class Moss {
       // 중앙 방향 ± 45도 범위 안에서 랜덤한 각도를 선택함
       // 이렇게 하면 대체로 화면 중앙 쪽으로 이끼가 퍼지는 느낌이 남
       let angleVariation = random(-PI/4, PI/4);
-      let ang = centerAngle + angleVariation;
+
+      // 폭주 모드일 때는 각도 제한을 풀어 아무 방향으로나 뻗게 함
+      let ang;
+      if (this.overgrowMode) {
+        ang = random(TWO_PI);
+      } else {
+        ang = centerAngle + angleVariation;
+      }
       
       // 부모에서 얼마나 떨어진 위치에 자식을 둘지 거리 범위를 랜덤으로 정함
       let distR = random(20, 60);
@@ -208,6 +236,8 @@ class Moss {
     }
   }
 
+
+
   grow() {
     // 이끼 덩어리 전체 성장 속도를 가속시킴
     this.lifeSpeed *= 1.2;
@@ -229,6 +259,8 @@ class Moss {
     }
   }
 
+
+
   isOffScreen() {
     // 이끼 패치들 중 하나라도 화면 내부에 있으면 false를 반환함
     for (let p of this.points) {
@@ -240,6 +272,8 @@ class Moss {
     // 모든 패치가 화면 밖에 있으면 true를 반환함
     return true;
   }
+
+
 
   checkCollision(target) {
     // target이 없으면 충돌은 일어나지 않은 것으로 처리함
@@ -275,6 +309,8 @@ class Moss {
     }
     return false;
   }
+
+
 
   display() {
     push();
