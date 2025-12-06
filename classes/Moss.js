@@ -56,9 +56,7 @@ class Moss {
     this.isInLightRange = null;
   }
 
-
-
-  addPoint(pos, generation) {
+  addPoint(pos, generation, initialProgress = 0) {
     // 이끼 패치의 기본 크기를 두 가지 중 하나로 랜덤 선택함
     let sizeOptions = [60, 100];
     let selectedSize = random(sizeOptions);
@@ -70,7 +68,8 @@ class Moss {
       // 몇 세대째 분기된 패치인지 저장함 (0은 루트, 1은 자식, 2는 손자 등)
       generation: generation,
       // 성장 진행도(0에서 1까지 증가하며 크기에 반영됨)를 저장함
-      progress: 0,
+      // 평소에는 0에서 시작하지만, 마지막 연출용으로 1에서 시작할 수도 있음
+      progress: initialProgress,
       // 이 패치가 성장하는 속도를 저장함 (점마다 약간씩 다르게 랜덤 설정함)
       growthSpeed: random(0.02, 0.04),
       // 노이즈 애니메이션 오프셋을 저장함 (살짝 흔들리는 효과를 위해 사용함)
@@ -85,8 +84,6 @@ class Moss {
     // 이 패치를 이끼 점 목록에 추가함
     this.points.push(p);
   }
-
-
 
   // overgrowMode는 화면을 많이 덮었을 때 폭주 모드 여부를 나타내는 플래그임
   update(lightObj, isInLightRange, overgrowMode = false) {
@@ -169,8 +166,6 @@ class Moss {
     }
   }
 
-
-
   trySpawn() {
     // 이미 최대 패치 수에 도달했다면 더 이상 분기하지 않음
     if (this.points.length >= this.maxPoints) return;
@@ -236,8 +231,6 @@ class Moss {
     }
   }
 
-
-
   grow() {
     // 이끼 덩어리 전체 성장 속도를 가속시킴
     this.lifeSpeed *= 1.2;
@@ -259,8 +252,6 @@ class Moss {
     }
   }
 
-
-
   isOffScreen() {
     // 이끼 패치들 중 하나라도 화면 내부에 있으면 false를 반환함
     for (let p of this.points) {
@@ -272,8 +263,6 @@ class Moss {
     // 모든 패치가 화면 밖에 있으면 true를 반환함
     return true;
   }
-
-
 
   checkCollision(target) {
     // target이 없으면 충돌은 일어나지 않은 것으로 처리함
@@ -309,8 +298,6 @@ class Moss {
     }
     return false;
   }
-
-
 
   display() {
     push();

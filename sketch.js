@@ -125,7 +125,7 @@ function draw() {
     case GAME_STATE.ENDING: drawEndingScreen(); break;
   }
 
-  // 이끼 덮기 연출이 끝난 다음 프레임부터 ENDING으로 전환
+  // 이끼가 화면을 거의 다 덮은 뒤, 다음 프레임부터 ENDING으로 전환
   if (overgrowFinished && currentState === GAME_STATE.PLAY) {
     currentState = GAME_STATE.ENDING;
   }
@@ -213,6 +213,15 @@ function runGameLogic() {
     p.display();
   }
 
+  // 이미 폭주 연출이 끝났으면, 이끼와 빛만 보여주고 로직은 멈춤
+  if (overgrowFinished) {
+    for (let m of mosses) {
+      m.display();
+    }
+    lightObj.display();
+    return;
+  }
+
 
   // --- 3. 이끼 업데이트 (역순 순회) ---
   for (let i = mosses.length - 1; i >= 0; i--) {
@@ -284,28 +293,27 @@ function runGameLogic() {
   processRegrowthQueue();
 
 
-  // coverage가 0.8을 넘는 순간: 화면을 이끼로 싹 덮기만 하고, 바로 게임오버는 하지 않음
+  // coverage가 0.8을 넘는 순간: 기존 이끼를 싹 지우고, 새 Moss 하나로 화면 전체를 덮음
   if (coverage > 0.8 && !overgrowFinished) {
-    console.log('OVERGROW TRIGGER', coverage);   // ← 실행 여부 확인용 로그
+    console.log('OVERGROW TRIGGER', coverage);
     overgrowFinished = true;
 
+    // 1) 새 Moss 하나 생성 (현재 이끼 이미지 중 하나 사용)
+    let img = mossImages.length > 0 ? mossImages[0] : null;
+    let fullMoss = new Moss(img, createVector(width / 2, height / 2));
 
-    let baseMoss = mosses.length > 0 ? mosses[0] : null;
-    if (baseMoss) {
-      // 모든 이끼의 점들을 지움
-      for (let m of mosses) {
-        m.points = [];
-      }
-
-
-      // 화면 전체를 촘촘한 격자로 새 이끼 패치로 덮기
-      let step = 30; // 줄일수록 더 촘촘
-      for (let x = 0; x < width; x += step) {
-        for (let y = 0; y < height; y += step) {
-          baseMoss.addPoint(createVector(x, y), 0);
-        }
+    // 2) 이 Moss의 points를 비우고, 화면 전체에 이끼 패치를 새로 생성
+    fullMoss.points = [];
+    let step = 30; // 더 촘촘히 하고 싶으면 20으로 줄이기
+    for (let x = 0; x < width; x += step) {
+      for (let y = 0; y < height; y += step) {
+        // progress를 1로 주어, 처음부터 최대 크기/불투명도로 보이게 함
+        fullMoss.addPoint(createVector(x, y), 0, 1);
       }
     }
+
+    // 3) 기존 이끼들은 버리고, 이 Moss 하나만 화면에 남김
+    mosses = [fullMoss];
   }
 }
 
