@@ -56,7 +56,7 @@ class Moss {
     this.isInLightRange = null;
   }
 
-  addPoint(pos, generation) {
+  addPoint(pos, generation, initialProgress = 0) {
     // 이끼 패치의 기본 크기를 두 가지 중 하나로 랜덤 선택함
     let sizeOptions = [60, 100];
     let selectedSize = random(sizeOptions);
@@ -68,7 +68,8 @@ class Moss {
       // 몇 세대째 분기된 패치인지 저장함 (0은 루트, 1은 자식, 2는 손자 등)
       generation: generation,
       // 성장 진행도(0에서 1까지 증가하며 크기에 반영됨)를 저장함
-      progress: 0,
+      // 평소에는 0에서 시작하지만, 마지막 연출용으로 1에서 시작할 수도 있음
+      progress: initialProgress,
       // 이 패치가 성장하는 속도를 저장함 (점마다 약간씩 다르게 랜덤 설정함)
       growthSpeed: random(0.02, 0.04),
       // 노이즈 애니메이션 오프셋을 저장함 (살짝 흔들리는 효과를 위해 사용함)
@@ -84,10 +85,13 @@ class Moss {
     this.points.push(p);
   }
 
-  update(lightObj, isInLightRange) {
+  // overgrowMode는 화면을 많이 덮었을 때 폭주 모드 여부를 나타내는 플래그임
+  update(lightObj, isInLightRange, overgrowMode = false) {
     // 현재 프레임에서 사용할 빛 오브젝트와 "빛 범위 안인지" 판정 함수를 저장함
     this.lightObj = lightObj;
     this.isInLightRange = isInLightRange;
+    // 폭주 모드 상태를 저장함
+    this.overgrowMode = overgrowMode;
     
     // 이끼 덩어리 전체 생애 진행도를 lifeSpeed만큼 증가시키고 0~1 범위로 제한함
     this.lifeProgress = constrain(this.lifeProgress + this.lifeSpeed, 0, 1);
@@ -111,6 +115,12 @@ class Moss {
     } else if (timePhase === 3) {
       // 밤에는 정상 속도로 자라도록 1.0을 사용함
       growthMultiplier = 1.0;
+    }
+
+    // overgrowMode가 켜졌을 때 성장 속도를 추가로 가속함
+    if (overgrowMode) {
+      // 예: 성장 속도를 8배로 가속함
+      growthMultiplier *= 8.0;
     }
 
     // 이끼 패치 각각에 대해 성장과 애니메이션을 갱신함
@@ -139,10 +149,16 @@ class Moss {
       spawnMultiplier = 1.0;
     }
 
+    // overgrowMode가 켜졌을 때 분기 속도도 추가로 가속함
+    if (overgrowMode) {
+      // 예: 분기 빈도를 5배로 가속함
+      spawnMultiplier *= 5.0;
+    }
+
     // spawnMultiplier가 0보다 클 때(새 패치를 허용할 때)만 분기를 시도함
     if (spawnMultiplier > 0) {
       // spawnInterval을 spawnMultiplier로 나누어
-      // 시간대에 따라 분기 시도 간격을 늘리거나 줄이는 효과를 만듦
+      // 시간대와 폭주 모드에 따라 분기 시도 간격을 늘리거나 줄이는 효과를 만듦
       if (frameCount - this.lastSpawnFrame > this.spawnInterval / spawnMultiplier) {
         this.lastSpawnFrame = frameCount;
         this.trySpawn();
@@ -184,7 +200,14 @@ class Moss {
       // 중앙 방향 ± 45도 범위 안에서 랜덤한 각도를 선택함
       // 이렇게 하면 대체로 화면 중앙 쪽으로 이끼가 퍼지는 느낌이 남
       let angleVariation = random(-PI/4, PI/4);
-      let ang = centerAngle + angleVariation;
+
+      // 폭주 모드일 때는 각도 제한을 풀어 아무 방향으로나 뻗게 함
+      let ang;
+      if (this.overgrowMode) {
+        ang = random(TWO_PI);
+      } else {
+        ang = centerAngle + angleVariation;
+      }
       
       // 부모에서 얼마나 떨어진 위치에 자식을 둘지 거리 범위를 랜덤으로 정함
       let distR = random(20, 60);
