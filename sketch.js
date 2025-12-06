@@ -249,8 +249,8 @@ function runGameLogic() {
   // --- 4. 이끼 재생성 큐 처리 ---
   processRegrowthQueue();
 
-  // coverage가 0.8을 넘는 순간: full-cover Moss 생성 + 1초 연출 준비
-  if (coverage > 0.8 && !overgrowFinished) {
+  // coverage가 0.95을 넘는 순간: full-cover Moss 생성 + 1초 연출 준비
+  if (coverage > 0.95 && !overgrowFinished) {
     console.log('OVERGROW TRIGGER', coverage);
     overgrowFinished = true;
     overgrowFrames = 60;    // 1초 동안 연출 유지
@@ -259,14 +259,30 @@ function runGameLogic() {
     let img = mossImages.length > 0 ? mossImages[0] : null;
     let fullMoss = new Moss(img, createVector(width / 2, height / 2));
 
-    // 2) 이 Moss의 points를 비우고, 화면 전체에 이끼 패치를 새로 생성
+    // 2) 이 Moss의 points를 비우고, 화면 전체에 이끼 패치를 새로 생성 (랜덤 순서)
     fullMoss.points = [];
+
     let step = 30; // 더 촘촘히 하고 싶으면 20 등으로 줄이기
+    let positions = [];
+
+    // 2-1) 먼저 모든 좌표를 배열에 담기
     for (let x = 0; x < width; x += step) {
       for (let y = 0; y < height; y += step) {
-        // progress를 1로 주어, 처음부터 최대 크기/불투명도로 보이게 함
-        fullMoss.addPoint(createVector(x, y), 0, 1);
+        positions.push(createVector(x, y));
       }
+    }
+
+    // 2-2) Fisher–Yates로 배열을 무작위 섞기
+    for (let i = positions.length - 1; i > 0; i--) {
+      let j = floor(random(i + 1));
+      let tmp = positions[i];
+      positions[i] = positions[j];
+      positions[j] = tmp;
+    }
+
+    // 2-3) 섞인 순서대로 패치 생성 (progress=1로, 처음부터 꽉 찬 이끼)
+    for (let pos of positions) {
+      fullMoss.addPoint(pos, 0, 1);
     }
 
     // 3) 기존 이끼들은 버리고, 이 Moss 하나만 화면에 남김
@@ -341,6 +357,7 @@ function updateTimeCycle() {
   background(lerpColor(colors[timePhase], colors[nextPhase], localT));
 }
 
+
 // Helper Functions
 
 function spawnPlants() {
@@ -391,6 +408,7 @@ function processRegrowthQueue() {
     }
   }
 }
+
 
 // UI 함수들
 function drawStartScreen() {

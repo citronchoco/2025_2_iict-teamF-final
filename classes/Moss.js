@@ -119,8 +119,8 @@ class Moss {
 
     // overgrowMode가 켜졌을 때 성장 속도를 추가로 가속함
     if (overgrowMode) {
-      // 예: 성장 속도를 6배로 가속함
-      growthMultiplier *= 6.0;
+      // 예: 성장 속도를 8배로 가속함
+      growthMultiplier *= 8.0;
     }
 
     // 이끼 패치 각각에 대해 성장과 애니메이션을 갱신함
@@ -151,8 +151,8 @@ class Moss {
 
     // overgrowMode가 켜졌을 때 분기 속도도 추가로 가속함
     if (overgrowMode) {
-      // 예: 분기 빈도를 3배로 가속함
-      spawnMultiplier *= 3.0;
+      // 예: 분기 빈도를 5배로 가속함
+      spawnMultiplier *= 5.0;
     }
 
     // spawnMultiplier가 0보다 클 때(새 패치를 허용할 때)만 분기를 시도함
