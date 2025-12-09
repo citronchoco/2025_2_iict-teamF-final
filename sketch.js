@@ -1,16 +1,16 @@
 let hudBg, startBg, tutorialBg, overBg;
-let whiteObliqueFont; 
+let whiteObliqueFont;
 let tutorialTitle, tutorialDescript, overDescript;
 
 let plantAssets = { stems: [], leaves: [], flowers: [] };
 let mossImages = [];
-let lightImage = []; 
+let lightImage = [];
 
 const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2, TUTORIAL: 3 };
 
 // 설정값
 const CFG = {
-  PLANT_COUNT: 15,       // 식물 15개
+  // PLANT_COUNT: 15,       // 식물 15개
   MOSS_COUNT: 50,        // 이끼 50개
   DAY_DURATION: 2400,    // 하루 길이
   SAFE_TIME: 300         // 게임 시작 후 5초(300프레임) 동안 무적
@@ -38,8 +38,12 @@ let saveMsgTimer = 0;
 let plants = [];
 let mosses = [];
 let lightObj;
-let regrowthQueue = []; 
-let mossStartPositions = []; 
+let regrowthQueue = [];
+let mossStartPositions = [];
+const MAX_PLANTS = 10; // 식물 최대 개수 제한 (10개)
+let seeds = [];       // 씨앗 객체 배열
+let seedImage;
+
 
 // 캡쳐한 화면 서버 저장용 변수
 let cnv;
@@ -66,27 +70,30 @@ function preload() {
   plantAssets.stems.push(loadImage('./assets/plant/stem_a.png'));
   plantAssets.stems.push(loadImage('./assets/plant/stem_b.png'));
   plantAssets.stems.push(loadImage('./assets/plant/stem_c.png'));
-  
+
   plantAssets.leaves.push(loadImage('./assets/plant/leaf_a.png'));
   plantAssets.leaves.push(loadImage('./assets/plant/leaf_b.png'));
   plantAssets.leaves.push(loadImage('./assets/plant/leaf_c.png'));
-  
+
   plantAssets.flowers.push(loadImage('./assets/plant/flower_1a.png'));
   plantAssets.flowers.push(loadImage('./assets/plant/flower_2a.png'));
   plantAssets.flowers.push(loadImage('./assets/plant/flower_3a.png'));
   plantAssets.flowers.push(loadImage('./assets/plant/flower_4a.png'));
-  
+
   // 이끼 및 빛 이미지 로드
   mossImages.push(loadImage('./assets/moss/moss_a.png'));
   mossImages.push(loadImage('./assets/moss/moss_b.png'));
   lightImage.push(loadImage('./assets/light/light_a.png'));
+
+  // 씨앗 이미지 로드
+  seedImage = loadImage('./assets/seed/seed_a.png');
 
   // UI 및 배경 리소스 로드
   hudBg = loadImage('./assets/background/wall.png');
   startBg = loadImage('./assets/background/opening.png');
   tutorialBg = loadImage('./assets/background/tutorial.png');
   // overBg = loadImage('./assets/background/tfour.jpg');
-  
+
   whiteObliqueFont = loadFont('./assets/font/LeferiPointWhiteOblique.ttf');
 }
 
@@ -98,6 +105,11 @@ function setup() {
     'https://hrygwxiqjlxizstgirps.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyeWd3eGlxamx4aXpzdGdpcnBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg0NTIsImV4cCI6MjA4MDg1NDQ1Mn0.G_EW_3Hmi3kUN3P6zDQIsNuXTLHe1igduOLNYuNcJiY'
   );
+
+  // 캔버스 내에서 우클릭 컨텍스트 메뉴를 완전히 차단
+  cnv.elt.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
 
   initGame();
 }
@@ -118,11 +130,11 @@ function initGame() {
   lightObj = new Light(width / 2, height / 2, lightImage);
 
   // 3. 식물 생성 (화면 하단에 확실히 고정)
-  spawnPlants();
-  
+  // spawnPlants();
+
   // 4. 이끼 생성 (식물과 겹치지 않게 안전 배치)
   spawnInitialMosses();
-  
+
   console.log("Game Initialized: Plants created ->", plants.length);
 }
 
@@ -224,9 +236,40 @@ function runGameLogic() {
   lightObj.update();
 
   // --- 2. 식물 업데이트 ---
-  for (let p of plants) {
-    p.update(lightObj); 
+  for (let i = plants.length - 1; i >= 0; i--) {
+    let p = plants[i];
+
+    p.update(lightObj);
     p.display();
+
+    // 식물 체력이 0 이하면 배열에서 제거 -> 슬롯 확보
+    if (p.isDead && p.debris.length === 0) {
+        plants.splice(i, 1);
+        console.log("Dead plant fully removed. Slot freed.");
+    }
+  }
+
+  // 씨앗 배열을 업데이트하고, 착륙한 씨앗을 처리
+  for (let i = seeds.length - 1; i >= 0; i--) {
+    let s = seeds[i];
+    let landed = s.update(); // 착륙 시 true 반환
+
+    // 착륙 시 식물 생성 조건
+    if (landed && !s.plantSpawned) { // s.plantSpawned 플래그를 사용하여 중복 생성 방지
+      if (plants.length < MAX_PLANTS) {
+        // 씨앗의 x좌표를 사용하여 바닥에 식물 생성
+        plants.push(new Plant(s.x, height, plantAssets));
+        s.plantSpawned = true; // 플래그 설정
+        // console.log(`Plant grown from seed at x=${s.x}.`);
+      }
+    }
+
+    s.display();
+
+    // 착륙 후 1초(60프레임)가 지나고 식물이 생성된 후 배열에서 제거 (식물 생성 후 사라지도록)
+    if (s.landed && s.plantSpawned && frameCount > s.startTime + 60) {
+      seeds.splice(i, 1);
+    }
   }
 
   // --- 3. 이끼 업데이트 (역순 순회) ---
@@ -234,7 +277,7 @@ function runGameLogic() {
     let m = mosses[i];
 
     m.update(
-      lightObj, 
+      lightObj,
       (x, y, light) => dist(x, y, light.x, light.y) < (light.r || 100),
       overgrowMode
     );
@@ -283,7 +326,7 @@ function runGameLogic() {
 
   // coverage가 0.95을 넘는 순간: full-cover Moss 생성 + 1초 연출 준비
   if (coverage > 0.95 && !overgrowFinished) {
-    console.log('OVERGROW TRIGGER', coverage);
+    // console.log('OVERGROW TRIGGER', coverage);
     overgrowFinished = true;
     overgrowFrames = 60;    // 1초 동안 연출 유지
 
@@ -362,7 +405,7 @@ function forceOvergrowTowardTarget() {
   let childPos = p5.Vector.add(parent.pos, dir.mult(distR));
 
   if (childPos.x < -200 || childPos.x > width + 200 ||
-      childPos.y < -200 || childPos.y > height + 200) {
+    childPos.y < -200 || childPos.y > height + 200) {
     return;
   }
 
@@ -373,7 +416,7 @@ function forceOvergrowTowardTarget() {
 function updateTimeCycle() {
   gameTime++;
   let cycle = gameTime % CFG.DAY_DURATION;
-  let t = cycle / CFG.DAY_DURATION; 
+  let t = cycle / CFG.DAY_DURATION;
 
   imageMode(CORNER);
   image(hudBg, 0, 0, 1024, 768);
@@ -388,28 +431,28 @@ function updateTimeCycle() {
   timePhase = floor(t * 4);
   let nextPhase = (timePhase + 1) % 4;
   let localT = (t * 4) % 1;
-  
+
   background(lerpColor(colors[timePhase], colors[nextPhase], localT));
 }
 
 
 // Helper Functions
 
-function spawnPlants() {
-  let spacing = width / (CFG.PLANT_COUNT + 1);
-  for (let i = 1; i <= CFG.PLANT_COUNT; i++) {
-    plants.push(new Plant(i * spacing, height -10, plantAssets));
-  }
-}
+// function spawnPlants() {
+//   let spacing = width / (CFG.PLANT_COUNT + 1);
+//   for (let i = 1; i <= CFG.PLANT_COUNT; i++) {
+//     plants.push(new Plant(i * spacing, height -10, plantAssets));
+//   }
+// }
 
 function spawnInitialMosses() {
   for (let i = 0; i < CFG.MOSS_COUNT; i++) {
     for (let k = 0; k < 100; k++) {
       let pos = getEdgePosition();
-      
+
       let mossTooClose = mossStartPositions.some(exist => dist(pos.x, pos.y, exist.x, exist.y) < 120);
       let plantTooClose = plants.some(p => dist(pos.x, pos.y, p.x, p.y) < 200);
-      
+
       if (!mossTooClose && !plantTooClose) {
         mossStartPositions.push(pos);
         mosses.push(new Moss(random(mossImages), pos));
@@ -421,11 +464,11 @@ function spawnInitialMosses() {
 
 function getEdgePosition() {
   let edge = floor(random(4));
-  let m = 20; 
-  if (edge === 0) return createVector(random(m, width-m), m);
-  if (edge === 1) return createVector(width-m, random(m, height-m));
-  if (edge === 2) return createVector(random(m, width-m), height-m);
-  return createVector(m, random(m, height-m));
+  let m = 20;
+  if (edge === 0) return createVector(random(m, width - m), m);
+  if (edge === 1) return createVector(width - m, random(m, height - m));
+  if (edge === 2) return createVector(random(m, width - m), height - m);
+  return createVector(m, random(m, height - m));
 }
 
 function scheduleRegrowth(pos) {
@@ -463,12 +506,12 @@ function drawStartScreen() {
   let mouseOverStart = pow(mouseX - 345, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
   let mouseOverTutorial = pow(mouseX - 679, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
 
-  if(mouseOverStart < 1) {
+  if (mouseOverStart < 1) {
     noStroke();
     fill(220, 220, 220, 100);
     ellipse(345, 555, 220, 70);
   }
-  if(mouseOverTutorial < 1) {
+  if (mouseOverTutorial < 1) {
     noStroke();
     fill(220, 220, 220, 100);
     ellipse(679, 555, 220, 70);
@@ -480,7 +523,7 @@ function drawTutorialScreen() {
 
   tutorialTitle = `빛과 그림자의 정원`;
   tutorialDescript = `40초마다 새벽-낮-황혼-밤 순으로 시간이 흘러갑니다.\n 마우스를 통해 다양한 식물을 조종해 자유롭게 정원을 꾸밀 수 있습니다.\n 밤 시간에는 조종이 불가하며 이끼가 랜덤하게 생성됩니다.\n 중간에 언제든지 스페이스바를 눌러 정원의 모습을 저장하실 수 있습니다.`;
-  
+
   textFont(whiteObliqueFont);
   textAlign(CENTER, CENTER);
   strokeWeight(3);
@@ -496,7 +539,7 @@ function drawTutorialScreen() {
   text(`START`, 512, 600);
 
   let mouseOverStart2 = pow(mouseX - 512, 2) / pow(110, 2) + pow(mouseY - 605, 2) / pow(35, 2);
-  if(mouseOverStart2 < 1) {
+  if (mouseOverStart2 < 1) {
     noStroke();
     fill(220, 220, 220, 100);
     ellipse(512, 605, 220, 70);
@@ -505,9 +548,9 @@ function drawTutorialScreen() {
 
 function drawEndingScreen() {
   image(overBg, 0, 0, 1024, 768);
-  
+
   overDescript = `PRESS    R    TO RESTART`;
-  
+
   textSize(40);
   fill(255);
   textFont(whiteObliqueFont);
@@ -519,7 +562,31 @@ function drawEndingScreen() {
   ellipse(449, 391, 90, 90);
 }
 
+function mouseClicked() {
+  // 마우스 우클릭이 아닌 경우, 원래 로직대로 처리 (LEFT 버튼 등)
+  if (mouseButton !== RIGHT) {
+    // 기존 마우스 왼쪽 버튼 클릭 로직은 mousePressed()에 있으므로 그대로 유지
+    return true;
+  }
+
+  // 이 함수에서는 RIGHT 버튼에 대한 추가적인 처리를 하지 않고 바로 종료
+  return true;
+}
+
 function mousePressed() {
+  if (mouseButton === RIGHT) {
+    if (currentState === GAME_STATE.PLAY) {
+      if (plants.length < MAX_PLANTS) {
+        seeds.push(new Seed(mouseX, mouseY, seedImage));
+        // console.log(`Plant spawned at x=${mouseX}. Total plants: ${plants.length}/${MAX_PLANTS}`);
+      } else {
+        // console.log(`MAX_PLANTS (${MAX_PLANTS}) limit reached.`);
+      }
+    }
+    // 우클릭 시 브라우저 컨텍스트 메뉴를 막기 위해 false를 리턴
+    return false;
+  }
+
   if (currentState === GAME_STATE.TITLE) {
     let checkStart = pow(mouseX - 345, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
     let checkTutorial = pow(mouseX - 679, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
@@ -542,12 +609,12 @@ function mousePressed() {
 
 function keyPressed() {
   if (key === 'd' || key === 'D') debugMode = !debugMode;
-  if (currentState === GAME_STATE.ENDING && keyCode===82) {
+  if (currentState === GAME_STATE.ENDING && keyCode === 82) {
     currentState = GAME_STATE.TITLE;
-    console.log(key);
+    // console.log(key);
   }
-  if(key === ' ' || keyCode === 32){
-    if(currentState === GAME_STATE.PLAY){
+  if (key === ' ' || keyCode === 32) {
+    if (currentState === GAME_STATE.PLAY) {
       uploadScreenshot();
     }
   }
@@ -568,7 +635,7 @@ async function uploadScreenshot() {
 
   // 2. 파일명 생성 (중복 방지용 시간 추가)
   const fileName = `public/garden_${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}.png`;
-  console.log("Uploading...", fileName);
+  // console.log("Uploading...", fileName);
 
   // 3. 헬퍼 함수를 사용해 파일 객체로 변환
   const imageFile = dataURLtoFile(base64Image, fileName);
@@ -577,8 +644,8 @@ async function uploadScreenshot() {
   try {
     const { data, error } = await client
       .storage
-      .from(BUCKET_NAME) 
-      .upload(fileName, imageFile, { 
+      .from(BUCKET_NAME)
+      .upload(fileName, imageFile, {
         contentType: 'image/png',
         cacheControl: "3600",
         upsert: false
@@ -589,7 +656,7 @@ async function uploadScreenshot() {
       alert("업로드 실패: " + error.message);
     } else {
       // console.log("Upload Success:", data);
-      showSaveMsg = true; 
+      showSaveMsg = true;
       saveMsgTimer = 180;
     }
   } catch (err) {
@@ -603,7 +670,7 @@ function drawSaveNotification() {
     rectMode(CENTER);
     noStroke();
     fill(0, 0, 0, 150); // 반투명 검은 배경
-    rect(width / 2, 80, 500, 60, 20); 
+    rect(width / 2, 80, 500, 60, 20);
 
     textAlign(CENTER, CENTER);
     textFont(whiteObliqueFont);
@@ -622,9 +689,9 @@ function drawSaveNotification() {
 
 
 function drawDebugInfo() {
-  fill(0, 255, 0); 
-  noStroke(); 
-  textAlign(LEFT, TOP); 
+  fill(0, 255, 0);
+  noStroke();
+  textAlign(LEFT, TOP);
   textSize(14);
   text(`FPS: ${int(frameRate())}`, 10, 10);
   text(`Plants: ${plants.length}`, 10, 30);
@@ -632,9 +699,9 @@ function drawDebugInfo() {
   text(`SafeMode: ${gameTime < CFG.SAFE_TIME ? "ON" : "OFF"}`, 10, 70);
   text(`TimePhase: ${timePhase}`, 10, 90);
 
-  for(let p of plants) {
-    noFill(); 
-    stroke(255, 0, 0); 
+  for (let p of plants) {
+    noFill();
+    stroke(255, 0, 0);
     strokeWeight(2);
     rectMode(CENTER);
     rect(p.x, p.y - 20, 20, 20);
