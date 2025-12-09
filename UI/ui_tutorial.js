@@ -4,28 +4,28 @@ let tutorialTitle;
 let tutorialDescript;
 
 
-function preload() {
- tutorialBg = loadImage(`assets/background/ttwo.jpg`)
- whiteOblique = loadFont(`assets/font/LeferiPointWhiteOblique.ttf`)
-}
+// function preload() {
+//  tutorialBg = loadImage(`assets/background/ttwo.jpg`)
+//  whiteOblique = loadFont(`assets/font/LeferiPointWhiteOblique.ttf`)
+// }
 
 
-function setup() {
- createCanvas(1024, 768);
-}
+// function setup() {
+//  createCanvas(1024, 768);
+// }
 
 
-function draw() {
- drawTutorial();
+// function draw() {
+//  drawTutorial();
  
- // 튜토리얼 화면 내 START 마우스오버 시 회색 반투명 원 나타남
- let mouseOverStart2 = pow(mouseX - 512, 2) / pow(110, 2) + pow(mouseY - 605, 2) / pow(35, 2);
- if(mouseOverStart2 < 1) {
-  noStroke()
-  fill(220, 220, 220, 100)
-  ellipse(512, 605, 220, 70)
- }
-}
+//  // 튜토리얼 화면 내 START 마우스오버 시 회색 반투명 원 나타남
+//  let mouseOverStart2 = pow(mouseX - 512, 2) / pow(110, 2) + pow(mouseY - 605, 2) / pow(35, 2);
+//  if(mouseOverStart2 < 1) {
+//   noStroke()
+//   fill(220, 220, 220, 100)
+//   ellipse(512, 605, 220, 70)
+//  }
+// }
 
 function drawTutorial() {
  image(tutorialBg, 0, 0, 1024, 768)

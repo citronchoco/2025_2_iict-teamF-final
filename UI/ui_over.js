@@ -3,20 +3,20 @@ let whiteOblique;
 let overDescript;
 
 
-function preload() {
- overBg = loadImage(`assets/background/tfour.jpg`)
- whiteOblique = loadFont(`assets/font/LeferiPointWhiteOblique.ttf`)
-}
+// function preload() {
+//  overBg = loadImage(`assets/background/tfour.jpg`)
+//  whiteOblique = loadFont(`assets/font/LeferiPointWhiteOblique.ttf`)
+// }
 
 
-function setup() {
- createCanvas(1024, 768);
-}
+// function setup() {
+//  createCanvas(1024, 768);
+// }
 
 
-function draw() {
- drawOver();
-}
+// function draw() {
+//  drawOver();
+// }
 
 function drawOver() {
  image(overBg, 0, 0, 1024, 768)

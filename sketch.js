@@ -30,12 +30,36 @@ let overgrowTargetPos = null;
 let overgrowFinished = false;
 let overgrowFrames = 0;      // 0이면 아직 연출 없음, 60이면 1초 연출
 
+// 저장 알림 메시지 관련 변수
+let showSaveMsg = false;
+let saveMsgTimer = 0;
+
 // 오브젝트
 let plants = [];
 let mosses = [];
 let lightObj;
 let regrowthQueue = []; 
 let mossStartPositions = []; 
+
+// 캡쳐한 화면 서버 저장용 변수
+let cnv;
+const BUCKET_NAME = 'image';
+let client;
+
+// Base64 데이터를 파일 객체로 변환하는 헬퍼 함수
+const dataURLtoFile = (dataurl, fileName) => {
+  var arr = dataurl.split(","),
+    mime = arr[0].match(/:(.*?);/)[1],
+    bstr = atob(arr[1]),
+    n = bstr.length,
+    u8arr = new Uint8Array(n);
+
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+
+  return new File([u8arr], fileName, { type: mime });
+};
 
 function preload() {
   // 식물 이미지 로드
@@ -58,17 +82,23 @@ function preload() {
   lightImage.push(loadImage('./assets/light/light_a.png'));
 
   // UI 및 배경 리소스 로드
-  hudBg = loadImage('./assets/background/tthree.jpg');
-  startBg = loadImage('./assets/background/tone.jpg');
-  tutorialBg = loadImage('./assets/background/ttwo.jpg');
-  overBg = loadImage('./assets/background/tfour.jpg');
+  hudBg = loadImage('./assets/background/wall.png');
+  startBg = loadImage('./assets/background/opening.png');
+  tutorialBg = loadImage('./assets/background/tutorial.png');
+  // overBg = loadImage('./assets/background/tfour.jpg');
   
   whiteObliqueFont = loadFont('./assets/font/LeferiPointWhiteOblique.ttf');
 }
 
 function setup() {
-  createCanvas(1024, 768);
+  cnv = createCanvas(1024, 768);
   frameRate(60);
+
+  client = window.supabase.createClient(
+    'https://hrygwxiqjlxizstgirps.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyeWd3eGlxamx4aXpzdGdpcnBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg0NTIsImV4cCI6MjA4MDg1NDQ1Mn0.G_EW_3Hmi3kUN3P6zDQIsNuXTLHe1igduOLNYuNcJiY'
+  );
+
   initGame();
 }
 
@@ -81,6 +111,8 @@ function initGame() {
   gameTime = 0;
   overgrowFinished = false;
   overgrowFrames = 0;
+  showSaveMsg = false; // 여기서 다시 0으로 만듦
+  saveMsgTimer = 0;
 
   // 2. 플레이어(Light) 생성
   lightObj = new Light(width / 2, height / 2, lightImage);
@@ -95,7 +127,7 @@ function initGame() {
 }
 
 function draw() {
-  console.log(currentState)
+  // console.log(currentState)
 
   switch (currentState) {
     case GAME_STATE.TITLE:
@@ -117,7 +149,7 @@ function draw() {
   if (overgrowFinished && overgrowFrames <= 0 && currentState === GAME_STATE.PLAY) {
     currentState = GAME_STATE.ENDING;
   }
-
+  drawSaveNotification();
   if (debugMode) drawDebugInfo();
 }
 
@@ -343,11 +375,14 @@ function updateTimeCycle() {
   let cycle = gameTime % CFG.DAY_DURATION;
   let t = cycle / CFG.DAY_DURATION; 
 
+  imageMode(CORNER);
+  image(hudBg, 0, 0, 1024, 768);
+
   let colors = [
-    color(60, 80, 120),   // 새벽
-    color(135, 206, 235), // 낮
-    color(200, 100, 50),  // 황혼
-    color(20, 20, 40)     // 밤
+    color(60, 80, 120, 150),   // 새벽
+    color(135, 206, 235, 80), // 낮
+    color(200, 100, 50, 120),  // 황혼
+    color(20, 20, 40, 200)     // 밤
   ];
 
   timePhase = floor(t * 4);
@@ -511,7 +546,80 @@ function keyPressed() {
     currentState = GAME_STATE.TITLE;
     console.log(key);
   }
+  if(key === ' ' || keyCode === 32){
+    if(currentState === GAME_STATE.PLAY){
+      uploadScreenshot();
+    }
+  }
 }
+
+async function uploadScreenshot() {
+  // 1. 현재 캔버스를 Base64 데이터로 변환 (기본값 PNG)
+  let base64Image = cnv.canvas.toDataURL("image/png");
+
+  // 파일명 만들기
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0'); // 월 (0부터 시작하므로 +1)
+  const dd = String(now.getDate()).padStart(2, '0');      // 일
+  const hh = String(now.getHours()).padStart(2, '0');     // 시
+  const min = String(now.getMinutes()).padStart(2, '0');  // 분
+  const ss = String(now.getSeconds()).padStart(2, '0');   // 초
+
+  // 2. 파일명 생성 (중복 방지용 시간 추가)
+  const fileName = `public/garden_${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}.png`;
+  console.log("Uploading...", fileName);
+
+  // 3. 헬퍼 함수를 사용해 파일 객체로 변환
+  const imageFile = dataURLtoFile(base64Image, fileName);
+
+  // 4. Supabase에 업로드
+  try {
+    const { data, error } = await client
+      .storage
+      .from(BUCKET_NAME) 
+      .upload(fileName, imageFile, { 
+        contentType: 'image/png',
+        cacheControl: "3600",
+        upsert: false
+      });
+
+    if (error) {
+      console.error("Upload Error:", error);
+      alert("업로드 실패: " + error.message);
+    } else {
+      // console.log("Upload Success:", data);
+      showSaveMsg = true; 
+      saveMsgTimer = 180;
+    }
+  } catch (err) {
+    console.error("Unexpected Error:", err);
+  }
+}
+
+function drawSaveNotification() {
+  if (showSaveMsg) {
+    push();
+    rectMode(CENTER);
+    noStroke();
+    fill(0, 0, 0, 150); // 반투명 검은 배경
+    rect(width / 2, 80, 500, 60, 20); 
+
+    textAlign(CENTER, CENTER);
+    textFont(whiteObliqueFont);
+    textSize(24);
+    fill(255);
+    text("정원의 모습이 서버에 저장되었습니다!", width / 2, 80);
+    pop();
+
+    // 타이머가 0이 될 때까지 줄어듦 (0 되면 알림 꺼짐)
+    saveMsgTimer--;
+    if (saveMsgTimer <= 0) {
+      showSaveMsg = false;
+    }
+  }
+}
+
 
 function drawDebugInfo() {
   fill(0, 255, 0); 
