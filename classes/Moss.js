@@ -111,7 +111,7 @@ class Moss {
       growthMultiplier = 0.0;
     } else if (timePhase === 0 || timePhase === 2) {
       // 새벽과 황혼에는 밤의 절반 속도로만 자라도록 0.5를 사용함
-      growthMultiplier = 0.5;
+      growthMultiplier = 0.3;
     } else if (timePhase === 3) {
       // 밤에는 정상 속도로 자라도록 1.0을 사용함
       growthMultiplier = 1.0;
@@ -119,8 +119,8 @@ class Moss {
 
     // overgrowMode가 켜졌을 때 성장 속도를 추가로 가속함
     if (overgrowMode) {
-      // 예: 성장 속도를 8배로 가속함
-      growthMultiplier *= 8.0;
+      // 예: 성장 속도를 7배로 가속함
+      growthMultiplier *= 7.0;
     }
 
     // 이끼 패치 각각에 대해 성장과 애니메이션을 갱신함
