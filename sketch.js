@@ -422,10 +422,10 @@ function updateTimeCycle() {
   image(hudBg, 0, 0, 1024, 768);
 
   let colors = [
-    color(60, 80, 120, 150),   // 새벽
-    color(135, 206, 235, 80), // 낮
-    color(200, 100, 50, 120),  // 황혼
-    color(20, 20, 40, 200)     // 밤
+    color(18, 100, 220, 100),   // 새벽
+    color(0, 0, 0, 0), // 낮
+    color(255, 100, 0, 120),  // 황혼
+    color(20, 20, 70, 200)     // 밤
   ];
 
   timePhase = floor(t * 4);
