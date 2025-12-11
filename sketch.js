@@ -1,5 +1,5 @@
 let hudBg, startBg, tutorialBg, overBg;
-let whiteObliqueFont;
+let kubulimFont;
 let tutorialTitle, tutorialDescript, overDescript;
 
 let plantAssets = { stems: [], leaves: [], flowers: [] };
@@ -33,6 +33,10 @@ let overgrowFrames = 0;      // 0이면 아직 연출 없음, 60이면 1초 연�
 // 저장 알림 메시지 관련 변수
 let showSaveMsg = false;
 let saveMsgTimer = 0;
+let alpha = 255;
+let FADE_RATE = 6;
+let notification_PARTICLE_COUNT = 100;
+let particles = [];
 
 // 오브젝트
 let plants = [];
@@ -94,7 +98,7 @@ function preload() {
   tutorialBg = loadImage('./assets/background/tutorial.png');
   // overBg = loadImage('./assets/background/tfour.jpg');
 
-  whiteObliqueFont = loadFont('./assets/font/LeferiPointWhiteOblique.ttf');
+  kubulimFont = loadFont('./assets/font/BMKkubulimTTF.ttf');
 }
 
 function setup() {
@@ -493,7 +497,7 @@ function drawStartScreen() {
   image(startBg, 0, 0, 1024, 768);
   stroke(255);
 
-  textFont(whiteObliqueFont);
+  textFont(kubulimFont);
   strokeWeight(1);
   fill(255);
   textSize(30);
@@ -524,7 +528,7 @@ function drawTutorialScreen() {
   tutorialTitle = `빛과 그림자의 정원`;
   tutorialDescript = `40초마다 새벽-낮-황혼-밤 순으로 시간이 흘러갑니다.\n 마우스를 통해 다양한 식물을 조종해 자유롭게 정원을 꾸밀 수 있습니다.\n 밤 시간에는 조종이 불가하며 이끼가 랜덤하게 생성됩니다.\n 중간에 언제든지 스페이스바를 눌러 정원의 모습을 저장하실 수 있습니다.`;
 
-  textFont(whiteObliqueFont);
+  textFont(kubulimFont);
   textAlign(CENTER, CENTER);
   strokeWeight(3);
   fill(255);
@@ -553,7 +557,7 @@ function drawEndingScreen() {
 
   textSize(40);
   fill(255);
-  textFont(whiteObliqueFont);
+  textFont(kubulimFont);
   textAlign(CENTER, CENTER);
   text(overDescript, 512, 384);
 
@@ -665,28 +669,76 @@ async function uploadScreenshot() {
 }
 
 function drawSaveNotification() {
+  // 알림 그리기
   if (showSaveMsg) {
-    push();
-    rectMode(CENTER);
-    noStroke();
-    fill(0, 0, 0, 150); // 반투명 검은 배경
-    rect(width / 2, 80, 500, 60, 20);
+    drawFadingNotification();
+    drawNotificationParticles();
+  }
 
-    textAlign(CENTER, CENTER);
-    textFont(whiteObliqueFont);
-    textSize(24);
-    fill(255);
-    text("정원의 모습이 서버에 저장되었습니다!", width / 2, 80);
-    pop();
+  // 투명도 감소 및 종료 확인
+  if (showSaveMsg) {
+    // 투명도 감소
+    alpha = max(0, alpha - FADE_RATE);
 
-    // 타이머가 0이 될 때까지 줄어듦 (0 되면 알림 꺼짐)
-    saveMsgTimer--;
-    if (saveMsgTimer <= 0) {
+    // 투명도가 0이 되면 알림 표시를 완전히 끔
+    if (alpha <= 0) {
       showSaveMsg = false;
+      particles = [];
     }
   }
 }
 
+function drawFadingNotification() {
+  // 투명도가 0보다 클 때만 그리기
+  if (alpha > 0) {
+    // 회색 반투명 직사각형
+    rectMode(CENTER);
+    noStroke();
+    fill(220, 220, 220, alpha * 0.4); // 배경의 최대 투명도는 255가 아닌 100으로 유지
+    rect(width / 2, 80, 500, 60, 20);
+
+    // 텍스트
+    textAlign(CENTER, CENTER);
+    textFont(kubulimFont);
+    textSize(24);
+    // fill(255) 대신 fill(255, alpha)로 텍스트도 같이 투명하게
+    fill(255, alpha); 
+    text("정원의 모습이 서버에 저장되었습니다!", width / 2, 80);
+  }
+}
+
+function drawNotificationParticles() {
+  for (let i = 0; i < particles.length; i++) {
+    particles[i].update();
+    particles[i].display();
+  }
+}
+
+function createNotificationParticles(centerX, centerY, w, h) {
+
+    for (let i = 0; i < notification_PARTICLE_COUNT; i++) {
+        let x, y;
+        
+        // 0=Top, 1=Bottom, 2=Left, 3=Right 중 한 변을 랜덤하게 선택
+        let side = floor(random(4)); 
+
+        if (side === 0) { // Top edge
+            x = random(centerX - w / 2, centerX + w / 2);
+            y = centerY - h / 2;
+        } else if (side === 1) { // Bottom edge
+            x = random(centerX - w / 2, centerX + w / 2);
+            y = centerY + h / 2;
+        } else if (side === 2) { // Left edge
+            x = centerX - w / 2;
+            y = random(centerY - h / 2, centerY + h / 2);
+        } else { // Right edge (side === 3)
+            x = centerX + w / 2;
+            y = random(centerY - h / 2, centerY + h / 2);
+        }
+
+        particles.push(new Particle(x, y));
+    }
+}
 
 function drawDebugInfo() {
   fill(0, 255, 0);
