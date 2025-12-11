@@ -47,6 +47,8 @@ let mossStartPositions = [];
 const MAX_PLANTS = 10; // 식물 최대 개수 제한 (10개)
 let seeds = [];       // 씨앗 객체 배열
 let seedImage;
+let ambiSound;        // 배경음
+let crackSounds = []; // 부서지는 소리
 
 
 // 캡쳐한 화면 서버 저장용 변수
@@ -91,6 +93,14 @@ function preload() {
 
   // 씨앗 이미지 로드
   seedImage = loadImage('./assets/seed/seed_a.png');
+
+  // 배경음 로드
+  ambiSound = loadSound('./assets/sound/ambi.wav');
+
+  // 부서지는 소리 로드
+  for (let i = 1; i <= 5; i++) {
+    crackSounds.push(loadSound(`./assets/sound/crack${i}.wav`));
+  }
 
   // UI 및 배경 리소스 로드
   hudBg = loadImage('./assets/background/wall.png');
@@ -598,6 +608,12 @@ function mousePressed() {
     if (checkStart < 1) {
       initGame();
       currentState = GAME_STATE.PLAY;
+      // 배경음 루프 재생 시작 (3초 페이드인, 볼륨 0.25)
+      if (ambiSound && !ambiSound.isPlaying()) {
+        ambiSound.setVolume(0);
+        ambiSound.loop();
+        ambiSound.setVolume(0.25, 3);
+      }
     } else if (checkTutorial < 1) {
       currentState = GAME_STATE.TUTORIAL;
     }
@@ -607,6 +623,12 @@ function mousePressed() {
     if (checkStart2 < 1) {
       initGame();
       currentState = GAME_STATE.PLAY;
+      // 배경음 루프 재생 시작 (3초 페이드인, 볼륨 0.25)
+      if (ambiSound && !ambiSound.isPlaying()) {
+        ambiSound.setVolume(0);
+        ambiSound.loop();
+        ambiSound.setVolume(0.25, 3);
+      }
     }
   }
 }

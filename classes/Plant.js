@@ -85,10 +85,10 @@ class Debris {
     
     config = config || {};
 
-    this.vx = config.vx !== undefined ? config.vx : random(-2.5, 2.5);
-    this.vy = config.vy !== undefined ? config.vy : random(-3, -0.5);
-    this.angularVel = config.angularVel !== undefined ? config.angularVel : random(-6, 6);
-    this.gravity = 0.18;
+    this.vx = config.vx !== undefined ? config.vx : random(-1.2, 1.2);
+    this.vy = config.vy !== undefined ? config.vy : random(-1.5, -0.2);
+    this.angularVel = config.angularVel !== undefined ? config.angularVel : random(-2.5, 2.5);
+    this.gravity = 0.12;
     this.friction = 0.92;
     this.bounceFactor = 0.25;
 
@@ -118,7 +118,7 @@ class Debris {
 
     this.life--;
 
-    const groundY = height - 45;
+    const groundY = height - 20;
     if (this.y > groundY) {
       this.y = groundY;
       this.vy *= -this.bounceFactor;
@@ -631,6 +631,10 @@ class Plant {
     this.y = y;
 
     this.config = Object.assign({}, DEFAULT_PLANT_CONFIG, config || {});
+    
+    // 꽃 높이 다양화: maxSegments에 ±3 랜덤 변동 추가
+    this.config.maxSegments = this.config.maxSegments + floor(random(-3, 4));
+    this.config.maxSegments = max(8, this.config.maxSegments); // 최소 8개 보장
 
     this.images = images || { stems: [], leaves: [], flowers: [] };
 
@@ -779,6 +783,16 @@ class Plant {
   _die() {
     if (this.isDead) return;
     this.isDead = true;
+    
+    // 부서지는 소리 재생 (crack1~crack5 중 랜덤)
+    if (typeof crackSounds !== 'undefined' && crackSounds.length > 0) {
+      let randomCrack = crackSounds[floor(random(crackSounds.length))];
+      if (randomCrack && !randomCrack.isPlaying()) {
+        randomCrack.setVolume(0.5);
+        randomCrack.play();
+      }
+    }
+    
     this._spawnDebris();
   }
 
@@ -788,17 +802,20 @@ class Plant {
     for (let leaf of this.leaves) {
       let pos = leaf.getAttachPosition();
       let size = leaf.getDisplaySize();
+      // Leaf display: segAngle + 90 + baseAngle + tilt + currentSway
+      let segAngle = leaf.segment.angle + leaf.segment.currentSway;
+      let leafDisplayAngle = segAngle + 90 + leaf.baseAngle + leaf.tilt + leaf.currentSway;
 
       this.debris.push(new Debris(
         leaf.img,
         pos.x,
         pos.y,
-        leaf.segment.angle + leaf.segment.currentSway + leaf.baseAngle,
+        leafDisplayAngle,
         {
           grayscale: useGray,
           life: random(100, 160),
-          vx: random(-3, 3) + leaf.side * 1.5,
-          vy: random(-2, 0),
+          vx: random(-1.2, 1.2) + leaf.side * 0.6,
+          vy: random(-0.8, 0),
           displayWidth: size.w,
           displayHeight: size.h
         }
@@ -808,16 +825,19 @@ class Plant {
     if (this.flower) {
       let pos = this.flower.getPosition();
       let size = this.flower.getDisplaySize();
+      // Flower display: segAngle + 90 + currentSway
+      let segAngle = this.flower.segment.angle + this.flower.segment.currentSway;
+      let flowerDisplayAngle = segAngle + 90 + this.flower.currentSway;
 
       this.debris.push(new Debris(
         this.flower.img,
         pos.x,
         pos.y,
-        this.flower.segment.angle + this.flower.segment.currentSway,
+        flowerDisplayAngle,
         {
           grayscale: useGray,
           life: random(120, 180),
-          vy: random(-4, -1),
+          vy: random(-1.5, -0.3),
           displayWidth: size.w,
           displayHeight: size.h
         }
@@ -830,17 +850,19 @@ class Plant {
 
       let midX = (seg.startX + seg.getSwayEndX()) / 2;
       let midY = (seg.startY + seg.getSwayEndY()) / 2;
+      // Segment display: angle - 90 + currentSway
+      let segDisplayAngle = seg.angle - 90 + seg.currentSway;
 
       this.debris.push(new Debris(
         seg.img,
         midX,
         midY,
-        seg.angle + seg.currentSway,
+        segDisplayAngle,
         {
           grayscale: useGray,
           life: random(80, 130),
-          vx: random(-2, 2),
-          vy: random(-1, 1),
+          vx: random(-0.8, 0.8),
+          vy: random(-0.4, 0.4),
           displayWidth: ASSET_SIZES.stems[0].w,
           displayHeight: seg.length,
           srcX: 0,
