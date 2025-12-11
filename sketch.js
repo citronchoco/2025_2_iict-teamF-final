@@ -517,18 +517,26 @@ function drawStartScreen() {
   textSize(60);
   text(`빛과 그림자의 정원`, 512, 300);
 
-  let mouseOverStart = pow(mouseX - 345, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
-  let mouseOverTutorial = pow(mouseX - 679, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
+  let mouseOverStart = pow(mouseX - 345, 2) / pow(100, 2) + pow(mouseY - 555, 2) / pow(35, 2);
+  let mouseOverTutorial = pow(mouseX - 679, 2) / pow(100, 2) + pow(mouseY - 555, 2) / pow(35, 2);
 
   if (mouseOverStart < 1) {
     noStroke();
-    fill(220, 220, 220, 100);
-    ellipse(345, 555, 220, 70);
+    fill(223, 169, 72, 100);
+    ellipse(345, 555, 200, 70);
+    fill(255);
+    strokeWeight(1);
+    textSize(30);
+    text(`START`, 345, 550);
   }
   if (mouseOverTutorial < 1) {
     noStroke();
-    fill(220, 220, 220, 100);
-    ellipse(679, 555, 220, 70);
+    fill(223, 169, 72, 100);
+    ellipse(679, 555, 200, 70);
+    fill(255);
+    strokeWeight(1);
+    textSize(30);
+    text(`TUTORIAL`, 679, 550);
   }
 }
 
@@ -542,21 +550,25 @@ function drawTutorialScreen() {
   textAlign(CENTER, CENTER);
   strokeWeight(3);
   fill(255);
-  textSize(20);
+  textSize(40);
   textLeading(30);
-  text(tutorialTitle, 512, 120);
+  text(tutorialTitle, 512, 220);
   strokeWeight(1);
   textSize(25);
   textLeading(70);
-  text(tutorialDescript, 512, 350);
+  text(tutorialDescript, 512, 400);
   textSize(30);
-  text(`START`, 512, 600);
+  text(`START`, 720, 565);
 
-  let mouseOverStart2 = pow(mouseX - 512, 2) / pow(110, 2) + pow(mouseY - 605, 2) / pow(35, 2);
+  let mouseOverStart2 = pow(mouseX - 720, 2) / pow(100, 2) + pow(mouseY - 570, 2) / pow(35, 2);
   if (mouseOverStart2 < 1) {
     noStroke();
-    fill(220, 220, 220, 100);
-    ellipse(512, 605, 220, 70);
+    fill(223, 169, 72, 100);
+    ellipse(720, 570, 200, 70);
+    fill(255)
+    strokeWeight(1)
+    textSize(30);
+    text(`START`, 720, 565);
   }
 }
 
@@ -602,8 +614,8 @@ function mousePressed() {
   }
 
   if (currentState === GAME_STATE.TITLE) {
-    let checkStart = pow(mouseX - 345, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
-    let checkTutorial = pow(mouseX - 679, 2) / pow(110, 2) + pow(mouseY - 555, 2) / pow(35, 2);
+    let checkStart = pow(mouseX - 345, 2) / pow(100, 2) + pow(mouseY - 555, 2) / pow(35, 2);
+    let checkTutorial = pow(mouseX - 679, 2) / pow(100, 2) + pow(mouseY - 555, 2) / pow(35, 2);
 
     if (checkStart < 1) {
       initGame();
@@ -619,7 +631,7 @@ function mousePressed() {
     }
   }
   else if (currentState === GAME_STATE.TUTORIAL) {
-    let checkStart2 = pow(mouseX - 512, 2) / pow(110, 2) + pow(mouseY - 605, 2) / pow(35, 2);
+    let checkStart2 = pow(mouseX - 720, 2) / pow(100, 2) + pow(mouseY - 570, 2) / pow(35, 2);
     if (checkStart2 < 1) {
       initGame();
       currentState = GAME_STATE.PLAY;
