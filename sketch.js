@@ -544,7 +544,7 @@ function drawTutorialScreen() {
   image(tutorialBg, 0, 0, 1024, 768);
 
   tutorialTitle = `빛과 그림자의 정원`;
-  tutorialDescript = `40초마다 새벽-낮-황혼-밤 순으로 시간이 흘러갑니다.\n 마우스를 통해 다양한 식물을 조종해 자유롭게 정원을 꾸밀 수 있습니다.\n 밤 시간에는 조종이 불가하며 이끼가 랜덤하게 생성됩니다.\n 중간에 언제든지 스페이스바를 눌러 정원의 모습을 저장하실 수 있습니다.`;
+  tutorialDescript = `40초마다 새벽-낮-황혼-밤 순으로 시간이 흘러갑니다.\n 마우스를 통해 다양한 식물을 조종해 자유롭게 정원을 꾸밀 수 있습니다. \n 우클릭을 하면 새로운 씨앗이 생성됩니다. \n 밤 시간에는 조종이 불가하며 이끼가 랜덤하게 생성됩니다.\n 중간에 언제든지 스페이스바를 눌러 정원의 모습을 저장하실 수 있습니다.`;
 
   textFont(kubulimFont);
   textAlign(CENTER, CENTER);
@@ -558,17 +558,17 @@ function drawTutorialScreen() {
   textLeading(70);
   text(tutorialDescript, 512, 400);
   textSize(30);
-  text(`START`, 720, 565);
+  text(`START`, 720, 585);
 
   let mouseOverStart2 = pow(mouseX - 720, 2) / pow(100, 2) + pow(mouseY - 570, 2) / pow(35, 2);
   if (mouseOverStart2 < 1) {
     noStroke();
     fill(223, 169, 72, 100);
-    ellipse(720, 570, 200, 70);
+    ellipse(720, 590, 200, 70);
     fill(255)
     strokeWeight(1)
     textSize(30);
-    text(`START`, 720, 565);
+    text(`START`, 720, 585);
   }
 }
 
