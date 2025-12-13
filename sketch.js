@@ -401,7 +401,7 @@ function runGameLogic() {
     if (gameTime > CFG.SAFE_TIME) {
       for (let p of plants) {
         if (m.checkCollisionWithPlant(p)) {
-          p.takeDamage(0.3);
+          p.takeDamage(0.5);
         }
       }
     }
