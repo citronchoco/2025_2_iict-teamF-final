@@ -280,22 +280,24 @@ class Moss {
     return false;
   }
   
-  checkCollisionWithPlant(plant) {
-    // 식물은 직사각형 형태로 간주하고, 패치의 원과 겹치는지 검사함
-    for (let p of this.points) {
-      let currentSize = p.baseSize * sqrt(p.progress);
-      let halfSize = currentSize / 2;
-      
-      // 패치의 원을 둘러싸는 정사각형과 식물의 사각형이 겹치는지 간단히 체크함
-      if (p.pos.x + halfSize > plant.x - plant.w / 2 && 
-          p.pos.x - halfSize < plant.x + plant.w / 2 &&
-          p.pos.y + halfSize > plant.y - plant.h && 
-          p.pos.y - halfSize < plant.y) {
-        return true;
-      }
+checkCollisionWithPlant(plant) {
+  for (let p of this.points) {
+    // 완전히 자란 이끼만 충돌 판정 (progress < 1이면 스킵)
+    if (p.progress < 1) continue;
+    
+    let currentSize = p.baseSize * sqrt(p.progress);
+    let halfSize = currentSize / 2;
+    
+    if (p.pos.x + halfSize > plant.x - plant.w / 2 && 
+        p.pos.x - halfSize < plant.x + plant.w / 2 &&
+        p.pos.y + halfSize > plant.y - plant.h && 
+        p.pos.y - halfSize < plant.y) {
+      return true;
     }
-    return false;
   }
+  return false;
+}
+
 
   display() {
     push();
