@@ -35,7 +35,7 @@ let showSaveMsg = false;
 let saveMsgTimer = 0;
 let alpha = 255;
 let FADE_RATE = 6;
-let notification_PARTICLE_COUNT = 100;
+let notification_PARTICLE_COUNT = 20;
 let particles = [];
 
 // 오브젝트
@@ -57,19 +57,21 @@ const BUCKET_NAME = 'image';
 let client;
 
 // Base64 데이터를 파일 객체로 변환하는 헬퍼 함수
-const dataURLtoFile = (dataurl, fileName) => {
-  var arr = dataurl.split(","),
-    mime = arr[0].match(/:(.*?);/)[1],
-    bstr = atob(arr[1]),
-    n = bstr.length,
-    u8arr = new Uint8Array(n);
+// const dataURLtoFile = (dataurl, fileName) => {
+//   var arr = dataurl.split(","),
+//     mime = arr[0].match(/:(.*?);/)[1],
+//     bstr = atob(arr[1]),
+//     n = bstr.length,
+//     u8arr = new Uint8Array(n);
 
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n);
-  }
+//   while (n--) {
+//     u8arr[n] = bstr.charCodeAt(n);
+//   }
 
-  return new File([u8arr], fileName, { type: mime });
-};
+//   return new File([u8arr], fileName, { type: mime });
+// };
+
+
 
 function preload() {
   // 식물 이미지 로드
@@ -258,8 +260,8 @@ function runGameLogic() {
 
     // 식물 체력이 0 이하면 배열에서 제거 -> 슬롯 확보
     if (p.isDead && p.debris.length === 0) {
-        plants.splice(i, 1);
-        console.log("Dead plant fully removed. Slot freed.");
+      plants.splice(i, 1);
+      console.log("Dead plant fully removed. Slot freed.");
     }
   }
 
@@ -660,7 +662,7 @@ function keyPressed() {
 
 async function uploadScreenshot() {
   // 1. 현재 캔버스를 Base64 데이터로 변환 (기본값 PNG)
-  let base64Image = cnv.canvas.toDataURL("image/png");
+  // let base64Image = cnv.canvas.toDataURL("image/png");
 
   // 파일명 만들기
   const now = new Date();
@@ -672,54 +674,107 @@ async function uploadScreenshot() {
   const ss = String(now.getSeconds()).padStart(2, '0');   // 초
 
   // 2. 파일명 생성 (중복 방지용 시간 추가)
-  const fileName = `public/garden_${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}.png`;
+  const fileName = `public/garden_${yyyy}-${mm}-${dd}_${hh}-${min}-${ss}.jpg`;
   // console.log("Uploading...", fileName);
 
-  // 3. 헬퍼 함수를 사용해 파일 객체로 변환
-  const imageFile = dataURLtoFile(base64Image, fileName);
+  cnv.elt.toBlob(async (blob) => {
 
-  // 4. Supabase에 업로드
-  try {
-    const { data, error } = await client
-      .storage
-      .from(BUCKET_NAME)
-      .upload(fileName, imageFile, {
-        contentType: 'image/png',
-        cacheControl: "3600",
-        upsert: false
-      });
+    // 3. Supabase에 바로 blob 업로드
+    try {
+      const { data, error } = await client
+        .storage
+        .from(BUCKET_NAME)
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg', // 여기도 jpeg로 설정
+          cacheControl: "3600",
+          upsert: false
+        });
 
-    if (error) {
-      console.error("Upload Error:", error);
-      alert("업로드 실패: " + error.message);
-    } else {
-      // console.log("Upload Success:", data);
-      showSaveMsg = true;
-      saveMsgTimer = 180;
+      if (error) {
+        console.error("Upload Error:", error);
+        alert("업로드 실패: " + error.message);
+      } else {
+        // 성공 시 알림 처리 (기존 코드 유지)
+        particles = [];
+        createNotificationParticles(width / 2, 80, 500, 60);
+        alpha = 255;
+        showSaveMsg = true;
+        saveMsgTimer = 180;
+
+      }
+    } catch (err) {
+      console.error("Unexpected Error:", err);
     }
-  } catch (err) {
-    console.error("Unexpected Error:", err);
-  }
+  }, 'image/jpeg', 0.8); // 0.8은 퀄리티 (0~1 사이값)
+
+  // // 3. 헬퍼 함수를 사용해 파일 객체로 변환
+  // const imageFile = dataURLtoFile(base64Image, fileName);
+
+  // // 4. Supabase에 업로드
+  // try {
+  //   const { data, error } = await client
+  //     .storage
+  //     .from(BUCKET_NAME)
+  //     .upload(fileName, imageFile, {
+  //       contentType: 'image/png',
+  //       cacheControl: "3600",
+  //       upsert: false
+  //     });
+
+  //   if (error) {
+  //     console.error("Upload Error:", error);
+  //     alert("업로드 실패: " + error.message);
+  //   } else {
+  //     // console.log("Upload Success:", data);
+  //     alpha = 255;
+  //     showSaveMsg = true;
+  //     saveMsgTimer = 180;
+
+  //     particles = []; 
+  //     createNotificationParticles(width / 2, 80, 500, 60);
+  //   }
+  // } catch (err) {
+  //   console.error("Unexpected Error:", err);
+  // }
 }
 
 function drawSaveNotification() {
   // 알림 그리기
   if (showSaveMsg) {
+
     drawFadingNotification();
-    drawNotificationParticles();
-  }
-
-  // 투명도 감소 및 종료 확인
-  if (showSaveMsg) {
-    // 투명도 감소
-    alpha = max(0, alpha - FADE_RATE);
-
-    // 투명도가 0이 되면 알림 표시를 완전히 끔
-    if (alpha <= 0) {
-      showSaveMsg = false;
-      particles = [];
+    if (particles.length > 0) {
+      drawNotificationParticles();
     }
   }
+
+  // 2. 타이머 및 투명도 조절 로직
+  if (saveMsgTimer > 0) {
+    // 타이머가 남아있으면 시간만 줄이고, 투명도는 줄이지 마!
+    saveMsgTimer--;
+    alpha = 255;
+  } else {
+    // 타이머가 0이 되면 그때부터 서서히 사라지기 시작
+    alpha = max(0, alpha - FADE_RATE);
+  }
+
+  // 3. 완전히 투명해지면 종료
+  if (alpha <= 0 && saveMsgTimer <= 0) {
+    showSaveMsg = false;
+    particles = [];
+  }
+
+  // // 투명도 감소 및 종료 확인
+  // if (showSaveMsg) {
+  //   // 투명도 감소
+  //   alpha = max(0, alpha - FADE_RATE);
+
+  //   // 투명도가 0이 되면 알림 표시를 완전히 끔
+  //   if (alpha <= 0) {
+  //     showSaveMsg = false;
+  //     particles = [];
+  //   }
+  // }
 }
 
 function drawFadingNotification() {
@@ -736,13 +791,15 @@ function drawFadingNotification() {
     textFont(kubulimFont);
     textSize(24);
     // fill(255) 대신 fill(255, alpha)로 텍스트도 같이 투명하게
-    fill(255, alpha); 
+    fill(255, alpha);
     text("정원의 모습이 서버에 저장되었습니다!", width / 2, 80);
   }
 }
 
 function drawNotificationParticles() {
   for (let i = 0; i < particles.length; i++) {
+    console.log('particle:', particles[i]);  // 이게 뭔지 확인
+    console.log('has updated display?', typeof particles[i].display);  // 함수인지 확인
     particles[i].update();
     particles[i].display();
   }
@@ -750,28 +807,33 @@ function drawNotificationParticles() {
 
 function createNotificationParticles(centerX, centerY, w, h) {
 
-    for (let i = 0; i < notification_PARTICLE_COUNT; i++) {
-        let x, y;
-        
-        // 0=Top, 1=Bottom, 2=Left, 3=Right 중 한 변을 랜덤하게 선택
-        let side = floor(random(4)); 
+  for (let i = 0; i < notification_PARTICLE_COUNT; i++) {
+    let x, y;
 
-        if (side === 0) { // Top edge
-            x = random(centerX - w / 2, centerX + w / 2);
-            y = centerY - h / 2;
-        } else if (side === 1) { // Bottom edge
-            x = random(centerX - w / 2, centerX + w / 2);
-            y = centerY + h / 2;
-        } else if (side === 2) { // Left edge
-            x = centerX - w / 2;
-            y = random(centerY - h / 2, centerY + h / 2);
-        } else { // Right edge (side === 3)
-            x = centerX + w / 2;
-            y = random(centerY - h / 2, centerY + h / 2);
-        }
+    // 0=Top, 1=Bottom, 2=Left, 3=Right 중 한 변을 랜덤하게 선택
+    let side = floor(random(4));
 
-        particles.push(new Particle(x, y));
+    if (side === 0) { // Top edge
+      x = random(centerX - w / 2, centerX + w / 2);
+      y = centerY - h / 2;
+    } else if (side === 1) { // Bottom edge
+      x = random(centerX - w / 2, centerX + w / 2);
+      y = centerY + h / 2;
+    } else if (side === 2) { // Left edge
+      x = centerX - w / 2;
+      y = random(centerY - h / 2, centerY + h / 2);
+    } else { // Right edge (side === 3)
+      x = centerX + w / 2;
+      y = random(centerY - h / 2, centerY + h / 2);
     }
+
+    let p = new SaveEffect(x, y)
+    console.log('Created particle:', p);  // 생성 직후 확인
+    console.log('Has display?', typeof p.display);  // 메서드 확인
+    particles.push(p);
+
+    console.log('Total particles:', particles.length);
+  }
 }
 
 function drawDebugInfo() {

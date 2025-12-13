@@ -1,4 +1,4 @@
-class Particle {
+class SaveEffect {
     constructor(x, y) {
         this.pos = createVector(x, y); // 생성 위치 (알림 배너의 테두리)
         
@@ -23,14 +23,25 @@ class Particle {
         this.vel.mult(0.99); 
     }
 
-    display() {
-        // 알림 배너와 함께 사라짐
-        // 전역 변수 'alpha' 값을 그대로 투명도로 사용
-        let displayColor = this.baseColor;
-        displayColor.setAlpha(alpha);
+    // display() {
+    //     // 알림 배너와 함께 사라짐
+    //     // 전역 변수 'alpha' 값을 그대로 투명도로 사용
+    //     let displayColor = this.baseColor;
+    //     displayColor.setAlpha(alpha);
         
-        fill(displayColor);
+    //     fill(displayColor);
+    //     noStroke();
+    //     ellipse(this.pos.x, this.pos.y, this.size);
+    // }
+    display() {
         noStroke();
+        // 원본 색상을 건드리지 않고, fill 함수에서만 투명도를 적용
+        let r = red(this.baseColor);
+        let g = green(this.baseColor);
+        let b = blue(this.baseColor);
+        
+        fill(r, g, b, alpha);
         ellipse(this.pos.x, this.pos.y, this.size);
     }
 }
+

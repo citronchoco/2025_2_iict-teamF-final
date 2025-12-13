@@ -14,7 +14,7 @@ class Light {
 
     // 2. 파티클 지속 생성
     if(frameCount%2==0){
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 1; i++) {
         this.addParticle();
       }
     }
