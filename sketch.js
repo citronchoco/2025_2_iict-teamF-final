@@ -137,10 +137,10 @@ function preload() {
 function setup() {
   // 1. 전체 레이아웃을 잡을 컨테이너 생성
   let mainContainer = createDiv('');
-  mainContainer.style('display', 'flex');       // 가로 배치 모드
-  mainContainer.style('align-items', 'center'); // 세로 중앙 정렬
-  mainContainer.style('gap', '20px');           // 게임화면과 QR 사이 간격 20px
-  mainContainer.style('padding', '20px');       // 전체 여백
+  mainContainer.style('display', 'flex');       
+  mainContainer.style('align-items', 'center'); 
+  mainContainer.style('gap', '20px');           
+  mainContainer.style('padding', '20px');       
 
   // 2. 게임 캔버스 생성 및 컨테이너에 넣기
   cnv = createCanvas(1024, 768);
@@ -150,15 +150,15 @@ function setup() {
   qrcodeDiv = createDiv('저장 대기 중...'); // 초기 텍스트
   qrcodeDiv.parent(mainContainer); // 박스를 mainContainer 안으로 이동
   
-  // --- CSS 스타일 적용 (sketch.js 안에서 CSS 쓰기) ---
-  qrcodeDiv.style('width', '200px');          // 너비
-  qrcodeDiv.style('height', '200px');         // 높이
-  qrcodeDiv.style('background-color', '#555'); // 초기 회색 배경
-  qrcodeDiv.style('color', '#aaa');           // 글자 색
-  qrcodeDiv.style('display', 'flex');         // 글자 중앙 정렬용
+  // --- CSS 스타일 적용  ---
+  qrcodeDiv.style('width', '200px');          
+  qrcodeDiv.style('height', '200px');         
+  qrcodeDiv.style('background-color', '#555'); 
+  qrcodeDiv.style('color', '#aaa');           
+  qrcodeDiv.style('display', 'flex'); // 글자 중앙 정렬용
   qrcodeDiv.style('justify-content', 'center');
   qrcodeDiv.style('align-items', 'center');
-  qrcodeDiv.style('border-radius', '10px');   // 모서리 둥글게
+  qrcodeDiv.style('border-radius', '10px');   
 
   frameRate(60);
 
@@ -799,11 +799,11 @@ async function uploadScreenshot() {
   // 파일명 만들기
   const now = new Date();
   const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, '0'); // 월 (0부터 시작하므로 +1)
-  const dd = String(now.getDate()).padStart(2, '0');      // 일
-  const hh = String(now.getHours()).padStart(2, '0');     // 시
-  const min = String(now.getMinutes()).padStart(2, '0');  // 분
-  const ss = String(now.getSeconds()).padStart(2, '0');   // 초
+  const mm = String(now.getMonth() + 1).padStart(2, '0'); 
+  const dd = String(now.getDate()).padStart(2, '0');      
+  const hh = String(now.getHours()).padStart(2, '0');     
+  const min = String(now.getMinutes()).padStart(2, '0');  
+  const ss = String(now.getSeconds()).padStart(2, '0');   
 
 
   // 2. 파일명 생성 (중복 방지용 시간 추가)
@@ -819,7 +819,7 @@ async function uploadScreenshot() {
         .storage
         .from(BUCKET_NAME)
         .upload(fileName, blob, {
-          contentType: 'image/jpeg', // 여기도 jpeg로 설정
+          contentType: 'image/jpeg', 
           cacheControl: "3600",
           upsert: false
         });
@@ -828,7 +828,7 @@ async function uploadScreenshot() {
         console.error("Upload Error:", error);
         alert("업로드 실패: " + error.message);
       } else {
-        // 성공 시 알림 처리 (기존 코드 유지)
+        // 성공 시 알림 처리
         particles = [];
         createNotificationParticles(width / 2, 80, 500, 60);
         alpha = 255;
@@ -838,7 +838,7 @@ async function uploadScreenshot() {
         // 2. QR 코드 영역 스타일 변경 (회색 -> 흰색)
         qrcodeDiv.style('background-color', 'white'); 
         qrcodeDiv.style('color', 'black');
-        qrcodeDiv.html(''); // '저장 대기 중...' 글씨 삭제
+        qrcodeDiv.html(''); 
 
         // 3. 실제 QR 코드 생성
         const publicURL = `https://hrygwxiqjlxizstgirps.supabase.co/storage/v1/object/public/${BUCKET_NAME}/${fileName}`;
