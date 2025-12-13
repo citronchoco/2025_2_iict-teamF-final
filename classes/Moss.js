@@ -9,7 +9,8 @@ class Moss {
       startPos = startPos.copy();
     } else {
       // startPos가 없으면 화면 네 변 중 하나를 랜덤으로 골라 시작 위치를 생성함
-      let edge = floor(random(4));  // 0: 위, 1: 오른쪽, 2: 아래, 3: 왼쪽
+      // 0: 위, 1: 오른쪽, 2: 왼쪽 (아래쪽은 아예 제외)
+      let edge = floor(random(3));
       let margin = 1;
       if (edge === 0) {
         // 위쪽 변에서 랜덤 x 위치를 선택함
@@ -17,9 +18,6 @@ class Moss {
       } else if (edge === 1) {
         // 오른쪽 변에서 랜덤 y 위치를 선택함
         startPos = createVector(width - margin, random(height));
-      } else if (edge === 2) {
-        // 아래쪽 변에서 랜덤 x 위치를 선택함
-        startPos = createVector(random(width), height - margin);
       } else {
         // 왼쪽 변에서 랜덤 y 위치를 선택함
         startPos = createVector(margin, random(height));
