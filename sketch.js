@@ -1,3 +1,5 @@
+let qrcodeDiv; // QR코드가 뜰 회색 박스
+
 let hudBg, startBg, tutorialBg, overBg;
 let kubulimFont;
 let tutorialTitle, tutorialDescript, overDescript;
@@ -133,9 +135,32 @@ function preload() {
 
 
 function setup() {
-  cnv = createCanvas(1024, 768);
-  frameRate(60);
+  // 1. 전체 레이아웃을 잡을 컨테이너 생성
+  let mainContainer = createDiv('');
+  mainContainer.style('display', 'flex');       // 가로 배치 모드
+  mainContainer.style('align-items', 'center'); // 세로 중앙 정렬
+  mainContainer.style('gap', '20px');           // 게임화면과 QR 사이 간격 20px
+  mainContainer.style('padding', '20px');       // 전체 여백
 
+  // 2. 게임 캔버스 생성 및 컨테이너에 넣기
+  cnv = createCanvas(1024, 768);
+  cnv.parent(mainContainer); // 캔버스를 mainContainer 안으로 이동
+
+  // 3. 우측 QR 코드 박스(회색 사각형) 생성
+  qrcodeDiv = createDiv('저장 대기 중...'); // 초기 텍스트
+  qrcodeDiv.parent(mainContainer); // 박스를 mainContainer 안으로 이동
+  
+  // --- CSS 스타일 적용 (sketch.js 안에서 CSS 쓰기) ---
+  qrcodeDiv.style('width', '200px');          // 너비
+  qrcodeDiv.style('height', '200px');         // 높이
+  qrcodeDiv.style('background-color', '#555'); // 초기 회색 배경
+  qrcodeDiv.style('color', '#aaa');           // 글자 색
+  qrcodeDiv.style('display', 'flex');         // 글자 중앙 정렬용
+  qrcodeDiv.style('justify-content', 'center');
+  qrcodeDiv.style('align-items', 'center');
+  qrcodeDiv.style('border-radius', '10px');   // 모서리 둥글게
+
+  frameRate(60);
 
   client = window.supabase.createClient(
     'https://hrygwxiqjlxizstgirps.supabase.co',
@@ -810,6 +835,23 @@ async function uploadScreenshot() {
         showSaveMsg = true;
         saveMsgTimer = 180;
 
+        // 2. QR 코드 영역 스타일 변경 (회색 -> 흰색)
+        qrcodeDiv.style('background-color', 'white'); 
+        qrcodeDiv.style('color', 'black');
+        qrcodeDiv.html(''); // '저장 대기 중...' 글씨 삭제
+
+        // 3. 실제 QR 코드 생성
+        const publicURL = `https://hrygwxiqjlxizstgirps.supabase.co/storage/v1/object/public/${BUCKET_NAME}/${fileName}`;
+        
+        // QR 생성 (div 크기에 맞춤)
+        new QRCode(qrcodeDiv.elt, {
+          text: publicURL,
+          width: 180,  // 박스가 200px이므로 약간 작게
+          height: 180,
+          colorDark : "#000000",
+          colorLight : "#ffffff",
+          correctLevel : QRCode.CorrectLevel.H
+        });
       }
     } catch (err) {
       console.error("Unexpected Error:", err);
