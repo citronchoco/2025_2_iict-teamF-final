@@ -137,14 +137,14 @@ class Moss {
     // 이 값은 "새 이끼 패치를 얼마나 자주 분기시킬지"에 영향을 줌
     let spawnMultiplier = 1.0;
     if (timePhase === 1) {
-      // 낮에는 새로운 패치가 아예 생기지 않도록 0으로 설정함
+      // 낮
       spawnMultiplier = 0.0;
     } else if (timePhase === 0 || timePhase === 2) {
-      // 새벽과 황혼에는 분기 속도를 밤의 절반으로 줄임
-      spawnMultiplier = 0.5;
+      // 새벽과 황혼
+      spawnMultiplier = 0.3;
     } else if (timePhase === 3) {
-      // 밤에는 원래 설정된 속도로 분기함
-      spawnMultiplier = 1.0;
+      // 밤
+      spawnMultiplier = 0.7;
     }
 
     // overgrowMode가 켜졌을 때 분기 속도도 추가로 가속함
