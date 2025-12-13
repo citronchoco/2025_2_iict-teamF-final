@@ -105,14 +105,14 @@ class Moss {
     // timePhase는 전역 변수로 0: 새벽, 1: 낮, 2: 황혼, 3: 밤을 의미함
     let growthMultiplier = 1.0;
     if (timePhase === 1) {
-      // 낮에는 이끼가 자라지 않도록 성장 배율을 0으로 설정함
+      // 낮
       growthMultiplier = 0.0;
     } else if (timePhase === 0 || timePhase === 2) {
-      // 새벽과 황혼에는 밤의 절반 속도로만 자라도록 0.5를 사용함
+      // 새벽과 황혼
       growthMultiplier = 0.3;
     } else if (timePhase === 3) {
-      // 밤에는 정상 속도로 자라도록 1.0을 사용함
-      growthMultiplier = 1.0;
+      // 밤
+      growthMultiplier = 0.7;
     }
 
     // overgrowMode가 켜졌을 때 성장 속도를 추가로 가속함

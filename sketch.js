@@ -9,6 +9,8 @@ let plantAssets = { stems: [], leaves: [], flowers: [] };
 let mossImages = [];
 let lightImage = [];
 
+let prevCoverage = 0;
+let plantMossTimers = new Map();
 
 const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2, TUTORIAL: 3 };
 
@@ -179,6 +181,8 @@ function setup() {
 
 
 function initGame() {
+  plantMossTimers.clear();
+
   // 1. 변수 초기화
   plants = [];
   mosses = [];
@@ -239,8 +243,8 @@ function draw() {
 
 // 화면에서 이끼가 차지하는 대략적인 비율 계산함
 function getMossCoverageRatio() {
-  let cols = 40;
-  let rows = 30;
+  let cols = 25;
+  let rows = 18;
   let covered = 0;
   let total = cols * rows;
 
@@ -286,7 +290,14 @@ function getMossCoverageRatio() {
 
 function runGameLogic() {
   // --- 0. 이끼 커버리지 계산 및 폭주 모드 여부 결정 ---
-  let coverage = getMossCoverageRatio();
+  let coverage;
+  if (frameCount % 10 === 0) {          // 10프레임마다 한 번만 계산
+    coverage = getMossCoverageRatio();
+  } else {
+    coverage = prevCoverage || 0;      // 전 프레임 값 재사용
+  }
+  prevCoverage = coverage;
+
   let overgrowMode = coverage > 0.4;
 
 
@@ -398,13 +409,34 @@ function runGameLogic() {
     m.display();
 
 
-    if (gameTime > CFG.SAFE_TIME) {
-      for (let p of plants) {
+  if (gameTime > CFG.SAFE_TIME) {
+    for (let p of plants) {
+      // 1) 이 식물이 어느 이끼와라도 겹치는지 확인
+      let inContact = false;
+      for (let m of mosses) {
         if (m.checkCollisionWithPlant(p)) {
-          p.takeDamage(0.5);
+          inContact = true;
+          break;
         }
       }
+
+      // 2) 겹쳐 있으면 누적 시간 증가, 아니면 리셋
+      let key = p.x;                        // 식별자 없으니 x좌표를 키로 사용
+      let t = plantMossTimers.get(key) || 0;
+
+      if (inContact) {
+        t += 3 / 60;                        // 프레임당 약 3/60초 누적
+        plantMossTimers.set(key, t);
+
+        if (t >= 3.0) {                     // 3초 동안 계속 닿아 있으면
+          p.takeDamage(1.0);                // 한 번에 큰 데미지 (체력 거의 0)
+          plantMossTimers.set(key, 0);      // 다시 0부터 누적 (연속 처형 방지)
+        }
+      } else {
+        plantMossTimers.set(key, 0);        // 떨어지면 시간 리셋
+      }
     }
+  }
 
 
     if (m.points.length === 0) {
