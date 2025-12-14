@@ -737,7 +737,7 @@ function drawStartScreen() {
 
   if (mouseOverStart < 1) {
     noStroke();
-    fill(223, 169, 72, 100);
+    fill(250, 210, 140, 100);
     ellipse(345, 555, 200, 70);
     fill(255);
     strokeWeight(1);
@@ -746,7 +746,7 @@ function drawStartScreen() {
   }
   if (mouseOverTutorial < 1) {
     noStroke();
-    fill(223, 169, 72, 100);
+    fill(250, 210, 140, 100);
     ellipse(679, 555, 200, 70);
     fill(255);
     strokeWeight(1);
