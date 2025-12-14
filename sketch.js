@@ -152,9 +152,32 @@ function setup() {
   cnv = createCanvas(1024, 768);
   cnv.parent(mainContainer); // 캔버스를 mainContainer 안으로 이동
 
+  // 우측 패널 생성
+  let rightPanel = createDiv('');
+  rightPanel.parent(mainContainer);
+  rightPanel.style('display', 'flex');
+  rightPanel.style('flex-direction', 'column');
+  rightPanel.style('gap', '10px'); // 버튼과 박스 사이 간격
+
+  // 튜토리얼 버튼
+  let tutorialBtn = createButton('튜토리얼 다시보기');
+  tutorialBtn.parent(rightPanel);
+  tutorialBtn.style('padding', '10px 0');
+  tutorialBtn.style('background-color', '#777'); // QR박스보다 살짝 밝게
+  tutorialBtn.style('color', '#fff');
+  tutorialBtn.style('border', 'none');
+  tutorialBtn.style('border-radius', '10px');
+  tutorialBtn.style('font-family', 'korea, sans-serif'); // 폰트는 상황에 맞게
+  tutorialBtn.style('cursor', 'pointer');
+
+  // 버튼 클릭 시 튜토리얼 화면으로 이동
+  tutorialBtn.mousePressed(() => {
+     currentState = GAME_STATE.TUTORIAL;
+  });
+
   // 3. 우측 QR 코드 박스(회색 사각형) 생성
   qrcodeDiv = createDiv('저장 대기 중...'); // 초기 텍스트
-  qrcodeDiv.parent(mainContainer); // 박스를 mainContainer 안으로 이동
+  qrcodeDiv.parent(rightPanel); // 박스를 rightPanel 안으로 이동
   
   // --- CSS 스타일 적용  ---
   qrcodeDiv.style('width', '200px');          
@@ -825,7 +848,7 @@ function mouseClicked() {
 function mousePressed() {
   if (mouseButton === RIGHT) {
     if (currentState === GAME_STATE.PLAY) {
-      if (plants.length < MAX_PLANTS) {
+      if (plants.length + seeds.length < MAX_PLANTS) {
         seeds.push(new Seed(mouseX, mouseY, seedImage));
         // console.log(`Plant spawned at x=${mouseX}. Total plants: ${plants.length}/${MAX_PLANTS}`);
       } else {
