@@ -448,7 +448,9 @@ function runGameLogic() {
 
 
   if (overgrowMode && overgrowTargetPos) {
-    forceOvergrowTowardTarget();
+    if (frameCount % 3 === 0) {
+      forceOvergrowTowardTarget();
+    }
   }
 
 
