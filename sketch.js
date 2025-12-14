@@ -299,7 +299,7 @@ function runGameLogic() {
   }
   prevCoverage = coverage;
 
-  let overgrowMode = coverage > 0.4;
+  let overgrowMode = coverage > 0.6;
 
 
   if (overgrowMode && emptySamplePositions.length > 0) {

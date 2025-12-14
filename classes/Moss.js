@@ -32,7 +32,7 @@ class Moss {
     // 하나의 Moss 인스턴스는 여러 개의 작은 점(패치)들로 이루어져 있고, 그 점들을 이 배열에 저장함
     this.points = [];
     // 이 덩어리가 가질 수 있는 최대 패치 개수 설정함
-    this.maxPoints = 800;
+    this.maxPoints = 500;
     // 새 패치를 분기시키는 기본 프레임 간격 설정함
     this.spawnInterval = 15;
     // 마지막으로 분기 시도를 한 프레임을 기록함
@@ -98,7 +98,7 @@ class Moss {
     // 시간이 지날수록 더 많은 패치를 생성할 수 있게 함
     if (frameCount % 120 === 0) {
       this.maxPoints += 20;
-      this.maxPoints = min(this.maxPoints, 1000);
+      this.maxPoints = min(this.maxPoints, 700);
     }
 
     // 시간대에 따른 성장 배율 설정함
@@ -109,7 +109,7 @@ class Moss {
       growthMultiplier = 0.0;
     } else if (timePhase === 0 || timePhase === 2) {
       // 새벽과 황혼
-      growthMultiplier = 0.3;
+      growthMultiplier = 0.4;
     } else if (timePhase === 3) {
       // 밤
       growthMultiplier = 0.7;
@@ -117,8 +117,8 @@ class Moss {
 
     // overgrowMode가 켜졌을 때 성장 속도를 추가로 가속함
     if (overgrowMode) {
-      // 예: 성장 속도를 7배로 가속함
-      growthMultiplier *= 7.0;
+      // 예: 성장 속도를 4배로 가속함
+      growthMultiplier *= 4.0;
     }
 
     // 이끼 패치 각각에 대해 성장과 애니메이션을 갱신함
@@ -149,8 +149,8 @@ class Moss {
 
     // overgrowMode가 켜졌을 때 분기 속도도 추가로 가속함
     if (overgrowMode) {
-      // 예: 분기 빈도를 5배로 가속함
-      spawnMultiplier *= 5.0;
+      // 예: 분기 빈도를 2배로 가속함
+      spawnMultiplier *= 2.0;
     }
 
     // spawnMultiplier가 0보다 클 때(새 패치를 허용할 때)만 분기를 시도함
@@ -224,6 +224,17 @@ class Moss {
         continue;
       }
       
+      let tooClose = false;
+      for (let q of this.points) {
+        let d = dist(q.pos.x, q.pos.y, childPos.x, childPos.y);
+        if (d < 50) {           // 50px 안에 다른 이끼가 있으면 겹치지 않게 건너뛰기
+          tooClose = true;
+          break;
+        }
+      }
+
+if (tooClose) continue;
+
       // 최종적으로 조건을 통과한 위치에 자식 패치를 추가함
       this.addPoint(childPos, parent.generation + 1);
     }
