@@ -73,6 +73,12 @@ let cnv;
 const BUCKET_NAME = 'image';
 let client;
 
+// 스토리라인 관련 변수
+let storyWriter = null;
+let storylineCase = null; // 'ENDING' / 'ESCAPE'
+const DEBUG_MODE = true; // DEBUG ONLY
+let storyTexts = [];
+let currentSlide = 0;
 
 // Base64 데이터를 파일 객체로 변환하는 헬퍼 함수
 // const dataURLtoFile = (dataurl, fileName) => {
@@ -294,6 +300,9 @@ function checkAndTransitionToStory() {
     if (storyDelayTimer <= 0) {
       lastPlayStateImg = get();
       currentState = GAME_STATE.STORYLINE;
+
+      storylineCase = 'ENDING'
+      initStorylineTyping();
     }
   }
 }
@@ -791,6 +800,55 @@ function drawTutorialScreen() {
   }
 }
 
+function initStorylineTyping() {
+
+  if (storylineCase === 'ENDING') {
+    storyTexts = [
+      "기억의 성역에 들른 것을 환영합니다.",
+      "이곳은 희망찬 새벽부터 깊은 밤까지, \n 시간이 끊임없이 순환하는 꿈의 정원입니다.",
+      "낮에는 당신이 심은 행복한 기억들이 꽃이 되어 피어나지만, \n 밤이 오면 잊혀짐의 섭리처럼 이끼가 스며듭니다.",
+      "잊혀져 가는 것들을 지키기 위한 당신의 여정에 함께하게 되어 영광이었습니다.",
+      "그럼 다음 정원사가 도착하기 전까지, 잠시 안녕."
+    ];
+  } else {
+    storyTexts = [
+      "기억의 성역에 잠시나마 찾아와 주셔서 감사합니다.",
+      "이곳은 희망찬 새벽부터 깊은 밤까지, \n 시간이 끊임없이 순환하는 꿈의 정원입니다.",
+      "기억의 꽃을 가꾸고 망각의 이끼를 다듬기 위해 언제든 다시 들러 주세요.",
+      "그럼 다음 정원사가 도착하기 전까지, 잠시 안녕."
+    ];
+  }
+
+  currentSlide = 0;
+  storyWriter = new Storyline(
+    storyTexts[currentSlide],
+    width / 2,
+    height / 2,
+    70
+  );
+}
+
+function nextStorySlide() {
+
+  if (currentSlide === storyTexts.length - 1) {
+    currentState = GAME_STATE.ENDING;
+    return;
+  }
+
+  if (!storyWriter || !storyWriter.isFinished()) return;
+
+  currentSlide++;
+
+  if(currentSlide < storyTexts.length) {
+    storyWriter = new Storyline(
+      storyTexts[currentSlide],
+      width / 2,
+      height / 2,
+      70
+    );
+  }
+}
+
 function drawStoryLineScreen(){
   imageMode(CORNER);
   // 캡처해둔 마지막 플레이 화면 그리기
@@ -800,37 +858,49 @@ function drawStoryLineScreen(){
     background(0); // 만약 이미지가 없다면 검은색
   }
 
-  // 내용은 아직 미정이라 하셨으므로 기존과 동일하게 처리하되 함수명만 분리
-  let storyText = `스토리라인이 나옵니다...\n(재시작하려면 R을 누르세요)`;
-
-  textSize(40);
-  fill(255);
-  textFont(kubulimFont);
   textAlign(CENTER, CENTER);
-  text(storyText, 512, 384);
+  textFont(kubulimFont)
+  textSize(25);
+  fill(255);
+
+  if (storyWriter) {
+    storyWriter.update();
+    storyWriter.display()
+  }
+
+  if (storyWriter && storyWriter.isFinished()) {
+    textSize(20);
+    fill(255, 180);
+    text("CLICK ANYWHERE ON SCREEN", width / 2, height - 100);
+  }
 
   // 필요하다면 여기에 스토리 관련 이미지나 버튼 추가
 }
 
+// ===== DEBUG ONLY =====
+function debugGoToStory(caseType = 'ENDING') {
+  lastPlayStateImg = null;
+  storylineCase = caseType;
+  initStorylineTyping();
+  currentState = GAME_STATE.STORYLINE;
+}
+
 function drawEndingScreen() {
-  image(overBg, 0, 0, 1024, 768);
+  image(startBg, 0, 0, 1024, 768);
 
 
   overDescript = `PRESS    R    TO RESTART`;
 
+  fill(250, 210, 140, 100);
+  stroke(235, 217, 148);
+  ellipse(449, 391, 90, 90);
 
   textSize(40);
   fill(255);
   textFont(kubulimFont);
   textAlign(CENTER, CENTER);
   text(overDescript, 512, 384);
-
-
-  fill(220, 220, 220, 100);
-  stroke(235, 217, 148);
-  ellipse(449, 391, 90, 90);
 }
-
 
 function mouseClicked() {
   // 마우스 우클릭이 아닌 경우, 원래 로직대로 처리 (LEFT 버튼 등)
@@ -889,8 +959,11 @@ function mousePressed() {
       }
     }
   }
-}
 
+  if (currentState === GAME_STATE.STORYLINE) {
+      nextStorySlide();
+  }
+}
 
 function keyPressed() {
   if (key === 'd' || key === 'D') debugMode = !debugMode;
@@ -910,12 +983,18 @@ function keyPressed() {
     if (keyCode === ESCAPE) {
       lastPlayStateImg = null;
       currentState = GAME_STATE.STORYLINE;
+      storylineCase = 'ESCAPE';
+      initStorylineTyping();
     }
 
     // 스페이스바 캡처 로직
     if (key === ' ' || keyCode === 32) {
       uploadScreenshot();
     }
+
+    // 스토리라인 DEBUG ONLY
+    if (DEBUG_MODE && key === 'T') debugGoToStory('ENDING')
+    if (DEBUG_MODE && key === 'E') debugGoToStory('ESCAPE')
   }
 
   // if (key === ' ' || keyCode === 32) {
@@ -924,7 +1003,6 @@ function keyPressed() {
   //   }
   // }
 }
-
 
 async function uploadScreenshot() {
   // 1. 현재 캔버스를 Base64 데이터로 변환 (기본값 PNG)
