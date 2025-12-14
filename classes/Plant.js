@@ -45,8 +45,8 @@ const DEFAULT_PLANT_CONFIG = {
   segmentLength: 35,
   segmentGrowthSpeed: 1.2,
   angleVariation: 20,
-  upwardTendency: 0.15,
-  lightSeekingStrength: 0.18, // 빛 영향
+  upwardTendency: 0.25,       // 위로 자라려는 힘 (버프)
+  lightSeekingStrength: 0.12, // 빛 끌림 (너프)
 
   // 잎 관련
   leafSpawnInterval: 3,
@@ -60,9 +60,9 @@ const DEFAULT_PLANT_CONFIG = {
 
   // 체력 관련
   maxHealth: 100,
-  mossDamagePerFrame: 0.3,
-  healthRegenRate: 0.05,
-  healthRegenLightBonus: 0.1,
+  mossDamagePerFrame: 12.5,   // 이끼 데미지 (5프레임마다 체크하므로 5배)
+  healthRegenRate: 0.1,       // 체력 회복 (버프)
+  healthRegenLightBonus: 0.4, // 빛 속 회복 보너스 (버프)
 
   // 시각 효과
   grayscaleOnDeath: true,
@@ -270,7 +270,7 @@ class Segment {
 
     let diffToUp = this._angleDelta(this.angle, -90);
     this.angle += diffToUp * config.upwardTendency * 0.05;
-    this.angle = constrain(this.angle, -170, -10);
+    this.angle = constrain(this.angle, -150, -30); // 각도 제한 (너무 휘지 않게)
 
     if (config.swayEnabled) {
       let plantSway = config.plantSway || 0;
@@ -283,7 +283,7 @@ class Segment {
     }
   }
 
-  display() {
+  display(healthTint, flickerBrightness) {
     if (this.length <= 0) return;
 
     push();
@@ -293,6 +293,37 @@ class Segment {
 
     if (this.img) {
       imageMode(CORNER);
+
+      // 기본 색상 초기화
+      let tr = 255, tg = 255, tb = 255;
+      
+      // 시간대 색조 적용
+      if (typeof currentTimeTint !== 'undefined' && currentTimeTint) {
+        let r = red(currentTimeTint);
+        let g = green(currentTimeTint);
+        let b = blue(currentTimeTint);
+        let a = alpha(currentTimeTint);
+        let tintStrength = a / 255 * 0.3;
+        tr = lerp(255, r, tintStrength);
+        tg = lerp(255, g, tintStrength);
+        tb = lerp(255, b, tintStrength);
+      }
+      
+      // 체력 낮을 때 색상 변화 (까매짐)
+      if (healthTint) {
+        tr = min(tr, healthTint.r);
+        tg = min(tg, healthTint.g);
+        tb = min(tb, healthTint.b);
+      }
+      
+      // 데미지 받는 중 밝기 점멸
+      if (flickerBrightness) {
+        tr *= flickerBrightness;
+        tg *= flickerBrightness;
+        tb *= flickerBrightness;
+      }
+      
+      tint(tr, tg, tb);
 
       let srcX = 0;
       let srcY = this.sliceY;
@@ -305,6 +336,7 @@ class Segment {
       let dstH = this.length + 1;
 
       image(this.img, dstX, dstY, dstW, dstH, srcX, srcY, srcW, srcH);
+      noTint();
     } else {
       stroke(70, 100, 50);
       strokeWeight(6);
@@ -401,7 +433,7 @@ class Leaf {
     }
   }
 
-  display() {
+  display(healthTint, flickerBrightness) {
     if (!this.segment) return;
     if (this.segment.length < 5) return;
 
@@ -421,8 +453,39 @@ class Leaf {
     if (this.img) {
       imageMode(CENTER);
 
+      // 기본 색상 초기화
+      let tr = 255, tg = 255, tb = 255;
+      
+      // 시간대 색조 계산
+      if (typeof currentTimeTint !== 'undefined' && currentTimeTint) {
+        let r = red(currentTimeTint);
+        let g = green(currentTimeTint);
+        let b = blue(currentTimeTint);
+        let a = alpha(currentTimeTint);
+        let tintStrength = a / 255 * 0.3;
+        tr = lerp(255, r, tintStrength);
+        tg = lerp(255, g, tintStrength);
+        tb = lerp(255, b, tintStrength);
+      }
+      
+      // 체력 낮을 때 색상 변화 (까매짐)
+      if (healthTint) {
+        tr = min(tr, healthTint.r);
+        tg = min(tg, healthTint.g);
+        tb = min(tb, healthTint.b);
+      }
+      
+      // 데미지 받는 중 밝기 점멸
+      if (flickerBrightness) {
+        tr *= flickerBrightness;
+        tg *= flickerBrightness;
+        tb *= flickerBrightness;
+      }
+
       if (this.isWilting) {
-        tint(150, 140, 100, 200);
+        tint(lerp(tr, 150, 0.5), lerp(tg, 140, 0.5), lerp(tb, 100, 0.5), 200);
+      } else {
+        tint(tr, tg, tb);
       }
 
       image(this.img, 0, -h * 0.5, w, h);
@@ -555,15 +618,15 @@ class Flower {
     }
   }
 
-  display() {
+  display(healthTint, flickerBrightness) {
     if (!this.segment) return;
     if (this.segment.length < this.segment.targetLength * 0.5) return;
 
     let pos = this.getPosition();
 
     for (let p of this.pollenParticles) {
-      let alpha = map(p.life, 0, 80, 0, 180);
-      fill(255, 230, 150, alpha);
+      let pAlpha = map(p.life, 0, 80, 0, 180);
+      fill(255, 230, 150, pAlpha);
       noStroke();
       circle(p.x, p.y, p.size);
     }
@@ -580,7 +643,40 @@ class Flower {
 
     if (this.img) {
       imageMode(CENTER);
+      
+      // 기본 색상 초기화
+      let tr = 255, tg = 255, tb = 255;
+      
+      // 시간대 색조 적용
+      if (typeof currentTimeTint !== 'undefined' && currentTimeTint) {
+        let r = red(currentTimeTint);
+        let g = green(currentTimeTint);
+        let b = blue(currentTimeTint);
+        let a = alpha(currentTimeTint);
+        let tintStrength = a / 255 * 0.3;
+        tr = lerp(255, r, tintStrength);
+        tg = lerp(255, g, tintStrength);
+        tb = lerp(255, b, tintStrength);
+      }
+      
+      // 체력 낮을 때 색상 변화 (까매짐)
+      if (healthTint) {
+        tr = min(tr, healthTint.r);
+        tg = min(tg, healthTint.g);
+        tb = min(tb, healthTint.b);
+      }
+      
+      // 데미지 받는 중 밝기 점멸
+      if (flickerBrightness) {
+        tr *= flickerBrightness;
+        tg *= flickerBrightness;
+        tb *= flickerBrightness;
+      }
+      
+      tint(tr, tg, tb);
+      
       image(this.img, 0, -h * 0.4, w, h);
+      noTint();
     } else {
       this._drawDefaultFlower(w, h);
     }
@@ -649,6 +745,7 @@ class Plant {
     this.segments = [];
     this.leaves = [];
     this.flower = null;
+    this._flowerSegmentCount = 0; // 꽃이 생겨났을 때의 세그먼트 수
 
     this.debris = [];
 
@@ -698,16 +795,28 @@ class Plant {
 
     if (this.isDead) return;
 
+    // 체력 비율 계산
+    let healthRatio = this.health / this.config.maxHealth;
+    
+    // 체력이 50% 미만일 때 서서히 까매짐 (0%일 때 회색 tint(100,100,100) 상태)
+    let healthTint = null;
+    if (healthRatio < 0.5) {
+      // 50% -> 0%: 255 -> 100 (회색)
+      let darkenAmount = map(healthRatio, 0, 0.5, 1, 0);
+      let grayValue = lerp(255, 100, darkenAmount);
+      healthTint = { r: grayValue, g: grayValue, b: grayValue };
+    }
+
     for (let seg of this.segments) {
-      seg.display();
+      seg.display(healthTint, null);
     }
 
     for (let leaf of this.leaves) {
-      leaf.display();
+      leaf.display(healthTint, null);
     }
 
     if (this.flower) {
-      this.flower.display();
+      this.flower.display(healthTint, null);
     }
 
     if (typeof debugMode !== 'undefined' && debugMode) {
@@ -740,16 +849,73 @@ class Plant {
   _handleMoss(mosses) {
     if (!mosses || mosses.length === 0) return;
 
-    let isTouchingMoss = false;
+    // 성능 최적화: 5프레임마다 한 번만 충돌 체크
+    if (frameCount % 5 !== 0) return;
+
+    // 이끼와 충돌하는 부위 수 계산 (줄기, 잎, 꽃)
+    let stemHits = 0;
+    let leafHits = 0;
+    let flowerHit = false;
+
+    // 각 Moss 객체의 points 배열을 순회
     for (let moss of mosses) {
-      if (moss.checkCollisionWithPlant && moss.checkCollisionWithPlant(this)) {
-        isTouchingMoss = true;
-        break;
+      if (!moss.points) continue;
+      
+      for (let point of moss.points) {
+        // 완전히 자란 이끼만 충돌 판정
+        if (point.progress < 0.8) continue;
+        if (point.dying) continue;
+        
+        let mx = point.pos.x;
+        let my = point.pos.y;
+        let mr = point.baseSize * sqrt(point.progress) * 0.5; // 이끼 반경
+
+        // 줄기 충돌 체크
+        let stemRadius = 8;
+        for (let seg of this.segments) {
+          if (seg.length < 5) continue;
+          let d = this._pointToSegmentDist(mx, my, seg.startX, seg.startY, seg.getSwayEndX(), seg.getSwayEndY());
+          if (d < mr + stemRadius) {
+            stemHits++;
+          }
+        }
+
+        // 잎 충돌 체크
+        for (let leaf of this.leaves) {
+          let pos = leaf.getAttachPosition();
+          let size = leaf.getDisplaySize();
+          let leafRadius = min(size.w, size.h) * 0.4;
+          let d = dist(mx, my, pos.x, pos.y - size.h * 0.5);
+          if (d < mr + leafRadius) {
+            leafHits++;
+          }
+        }
+
+        // 꽃 충돌 체크 (디버그와 동일한 로직)
+        if (this.flower) {
+          let pos = this.flower.getPosition();
+          let size = this.flower.getDisplaySize();
+          let flowerRadius = min(size.w, size.h) * 0.35;
+          let flowerCenterY = pos.y - size.h * 0.3;
+          let d = dist(mx, my, pos.x, flowerCenterY);
+          if (d < mr + flowerRadius) {
+            flowerHit = true;
+          }
+        }
       }
     }
 
-    if (isTouchingMoss) {
-      this.takeDamage(this.config.mossDamagePerFrame);
+    // 데미지 계산: 기본 + 부위별 추가 데미지
+    let totalHits = stemHits + leafHits + (flowerHit ? 1 : 0);
+    if (totalHits > 0) {
+      let baseDamage = this.config.mossDamagePerFrame;
+      // 많이 닿을수록 더 큰 데미지
+      let damageMultiplier = 1.0;
+      if (flowerHit) damageMultiplier += 1.0;  // 꽃: +100%
+      damageMultiplier += leafHits * 0.2;      // 잎당: +20%
+      damageMultiplier += stemHits * 0.1;      // 줄기당: +10%
+      
+      this.takeDamage(baseDamage * damageMultiplier);
 
       if (this.health < this.config.maxHealth * 0.5) {
         for (let leaf of this.leaves) {
@@ -806,10 +972,17 @@ class Plant {
       let segAngle = leaf.segment.angle + leaf.segment.currentSway;
       let leafDisplayAngle = segAngle + 90 + leaf.baseAngle + leaf.tilt + leaf.currentSway;
 
+      // 잎 이미지는 회전된 상태에서 (0, -h * 0.5) 위치에 그려짐
+      // 로컬 좌표를 월드 좌표로 변환
+      let localY = -size.h * 0.5;
+      let angleRad = radians(leafDisplayAngle);
+      let offsetX_world = -localY * sin(angleRad);
+      let offsetY_world = localY * cos(angleRad);
+
       this.debris.push(new Debris(
         leaf.img,
-        pos.x,
-        pos.y,
+        pos.x + offsetX_world,
+        pos.y + offsetY_world,
         leafDisplayAngle,
         {
           grayscale: useGray,
@@ -828,11 +1001,20 @@ class Plant {
       // Flower display: segAngle + 90 + currentSway
       let segAngle = this.flower.segment.angle + this.flower.segment.currentSway;
       let flowerDisplayAngle = segAngle + 90 + this.flower.currentSway;
+      
+      // 꽃 이미지는 회전된 상태에서 (0, -h * 0.4) 위치에 그려짐
+      // 로컬 좌표 (0, -h*0.4)을 월드 좌표로 변환
+      // worldX = localX * cos - localY * sin = 0 - (-h*0.4) * sin = h*0.4 * sin
+      // worldY = localX * sin + localY * cos = 0 + (-h*0.4) * cos = -h*0.4 * cos
+      let localY = -size.h * 0.4;
+      let angleRad = radians(flowerDisplayAngle);
+      let offsetX_world = -localY * sin(angleRad);  // = h*0.4 * sin
+      let offsetY_world = localY * cos(angleRad);   // = -h*0.4 * cos
 
       this.debris.push(new Debris(
         this.flower.img,
-        pos.x,
-        pos.y,
+        pos.x + offsetX_world,
+        pos.y + offsetY_world,
         flowerDisplayAngle,
         {
           grayscale: useGray,
@@ -848,15 +1030,21 @@ class Plant {
       let seg = this.segments[i];
       if (seg.length < 5) continue;
 
-      let midX = (seg.startX + seg.getSwayEndX()) / 2;
-      let midY = (seg.startY + seg.getSwayEndY()) / 2;
       // Segment display: angle - 90 + currentSway
       let segDisplayAngle = seg.angle - 90 + seg.currentSway;
+      
+      // 줄기는 startX, startY에서 시작해서 길이 length만큼 그려짐
+      // imageMode(CORNER)로 (-dstW/2, 0)에서 시작하므로 중심은 (0, length/2)
+      // 이 로컬 중심점을 월드 좌표로 변환
+      let localY = seg.length / 2;
+      let angleRad = radians(segDisplayAngle);
+      let centerX = seg.startX + (-localY * sin(angleRad));
+      let centerY = seg.startY + (localY * cos(angleRad));
 
       this.debris.push(new Debris(
         seg.img,
-        midX,
-        midY,
+        centerX,
+        centerY,
         segDisplayAngle,
         {
           grayscale: useGray,
@@ -894,7 +1082,10 @@ class Plant {
 
     if (lastSeg.isGrowing) return;
 
-    if (this.segments.length < this.config.maxSegments) {
+    // 꽃이 있어도 2마디 더 자랄 수 있음
+    let maxAfterFlower = this.flower ? this._flowerSegmentCount + 2 : this.config.maxSegments;
+    
+    if (this.segments.length < min(maxAfterFlower, this.config.maxSegments)) {
       let targetSegments = floor(this.growth * this.config.maxSegments);
       if (this.segments.length < targetSegments) {
         this._addSegment(lightObj);
@@ -902,7 +1093,11 @@ class Plant {
     }
 
     this._trySpawnLeaf();
-    this._trySpawnFlower();
+    
+    // 꽃이 없을 때만 꽃 시도
+    if (!this.flower) {
+      this._trySpawnFlower();
+    }
   }
 
   _addSegment(lightObj) {
@@ -965,6 +1160,7 @@ class Plant {
     let flowerSize = this._getFlowerSize();
 
     this.flower = new Flower(lastSeg, flowerImg, flowerSize, this.stage);
+    this._flowerSegmentCount = this.segments.length; // 꽃 생성 시 세그먼트 수 저장
   }
 
   _updateStage() {
@@ -1032,6 +1228,7 @@ class Plant {
   }
 
   _updateHitbox() {
+    // 줄기(세그먼트)만 기준으로 히트박스 계산 (잎/꽃 제외)
     if (this.segments.length === 0) {
       this.w = 30;
       this.h = 30;
@@ -1052,24 +1249,9 @@ class Plant {
       maxY = max(maxY, seg.startY, endY);
     }
 
-    for (let leaf of this.leaves) {
-      let bounds = leaf.getBounds();
-      minX = min(minX, bounds.x);
-      maxX = max(maxX, bounds.x + bounds.w);
-      minY = min(minY, bounds.y);
-      maxY = max(maxY, bounds.y + bounds.h);
-    }
-
-    if (this.flower) {
-      let bounds = this.flower.getBounds();
-      minX = min(minX, bounds.x);
-      maxX = max(maxX, bounds.x + bounds.w);
-      minY = min(minY, bounds.y);
-      maxY = max(maxY, bounds.y + bounds.h);
-    }
-
-    this.w = (maxX - minX) + 30;
-    this.h = (maxY - minY) + 30;
+    // 줄기만 기준 + 약간의 패딩
+    this.w = (maxX - minX) + 10;
+    this.h = (maxY - minY) + 10;
     this._hitboxCenterX = (minX + maxX) / 2;
     this._hitboxCenterY = (minY + maxY) / 2;
   }
@@ -1111,18 +1293,68 @@ class Plant {
   checkCollision(target) {
     if (!target || this.isDead) return false;
 
-    let centerX = this._hitboxCenterX;
-    let centerY = this._hitboxCenterY;
-
     let targetX = target.x || 0;
     let targetY = target.y || 0;
     let targetR = target.r || target.size || 30;
 
-    let closestX = constrain(targetX, centerX - this.w / 2, centerX + this.w / 2);
-    let closestY = constrain(targetY, centerY - this.h / 2, centerY + this.h / 2);
+    // 1. 줄기(세그먼트) 충돌 체크 - 선분과 원의 거리 계산
+    let stemRadius = 8; // 줄기 두께의 반
+    for (let seg of this.segments) {
+      if (seg.length < 5) continue;
+      
+      let d = this._pointToSegmentDist(
+        targetX, targetY,
+        seg.startX, seg.startY,
+        seg.getSwayEndX(), seg.getSwayEndY()
+      );
+      
+      if (d < targetR + stemRadius) {
+        return true;
+      }
+    }
 
-    let d = dist(targetX, targetY, closestX, closestY);
-    return d < targetR;
+    // 2. 잎 충돌 체크 - 원형 근사
+    for (let leaf of this.leaves) {
+      let pos = leaf.getAttachPosition();
+      let size = leaf.getDisplaySize();
+      let leafRadius = min(size.w, size.h) * 0.4; // 잎 크기의 40%를 반경으로
+      
+      let d = dist(targetX, targetY, pos.x, pos.y - size.h * 0.3);
+      if (d < targetR + leafRadius) {
+        return true;
+      }
+    }
+
+    // 3. 꽃 충돌 체크 - 원형 근사
+    if (this.flower) {
+      let pos = this.flower.getPosition();
+      let size = this.flower.getDisplaySize();
+      let flowerRadius = min(size.w, size.h) * 0.35; // 꽃 크기의 35%를 반경으로
+      
+      let d = dist(targetX, targetY, pos.x, pos.y - size.h * 0.3);
+      if (d < targetR + flowerRadius) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // 점과 선분 사이의 최단 거리 계산
+  _pointToSegmentDist(px, py, x1, y1, x2, y2) {
+    let dx = x2 - x1;
+    let dy = y2 - y1;
+    let lengthSq = dx * dx + dy * dy;
+    
+    if (lengthSq === 0) {
+      return dist(px, py, x1, y1);
+    }
+    
+    let t = max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / lengthSq));
+    let closestX = x1 + t * dx;
+    let closestY = y1 + t * dy;
+    
+    return dist(px, py, closestX, closestY);
   }
 
   _angleDelta(from, to) {
@@ -1133,9 +1365,38 @@ class Plant {
   _drawDebug() {
     push();
 
+    // 줄기 히트박스 (빨간 원)
     noFill();
     stroke(255, 0, 0, 150);
     strokeWeight(1);
+    let stemRadius = 8;
+    for (let seg of this.segments) {
+      if (seg.length < 5) continue;
+      let midX = (seg.startX + seg.getSwayEndX()) / 2;
+      let midY = (seg.startY + seg.getSwayEndY()) / 2;
+      circle(midX, midY, stemRadius * 2);
+    }
+
+    // 잎 히트박스 (초록 원)
+    stroke(0, 255, 0, 150);
+    for (let leaf of this.leaves) {
+      let pos = leaf.getAttachPosition();
+      let size = leaf.getDisplaySize();
+      let leafRadius = min(size.w, size.h) * 0.4;
+      circle(pos.x, pos.y - size.h * 0.5, leafRadius * 2);
+    }
+
+    // 꽃 히트박스 (노란 원)
+    if (this.flower) {
+      stroke(255, 255, 0, 150);
+      let pos = this.flower.getPosition();
+      let size = this.flower.getDisplaySize();
+      let flowerRadius = min(size.w, size.h) * 0.35;
+      circle(pos.x, pos.y - size.h * 0.3, flowerRadius * 2);
+    }
+
+    // 전체 바운딩 박스 (회색)
+    stroke(150, 150, 150, 100);
     rectMode(CENTER);
     rect(this._hitboxCenterX, this._hitboxCenterY, this.w, this.h);
 

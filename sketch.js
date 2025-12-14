@@ -29,6 +29,7 @@ let currentState = GAME_STATE.TITLE;
 let debugMode = false;
 let gameTime = 0;
 let timePhase = 0;
+let currentTimeTint = null; // 시간대 색조 (식물에 적용)
 
 
 // 화면 샘플 그리드 기준 이끼가 안 덮인 칸들, 폭주 타깃
@@ -44,7 +45,7 @@ let overgrowFrames = 0;      // 0이면 아직 연출 없음, 60이면 1초 연�
 // 저장 알림 메시지 관련 변수
 let showSaveMsg = false;
 let saveMsgTimer = 0;
-let alpha = 255;
+let notificationAlpha = 255;
 let FADE_RATE = 6;
 let notification_PARTICLE_COUNT = 20;
 let particles = [];
@@ -335,7 +336,7 @@ function runGameLogic() {
     let p = plants[i];
 
 
-    p.update(lightObj);
+    p.update(lightObj, mosses);
     p.display();
 
 
@@ -586,7 +587,11 @@ function updateTimeCycle() {
   let localT = (t * 4) % 1;
 
 
-  background(lerpColor(colors[timePhase], colors[nextPhase], localT));
+  let bgTint = lerpColor(colors[timePhase], colors[nextPhase], localT);
+  background(bgTint);
+  
+  // 식물에 적용할 시간대 색조 계산
+  currentTimeTint = color(red(bgTint), green(bgTint), blue(bgTint), alpha(bgTint));
 }
 
 
@@ -784,11 +789,10 @@ function mousePressed() {
     if (checkStart < 1) {
       initGame();
       currentState = GAME_STATE.PLAY;
-      // 배경음 루프 재생 시작 (3초 페이드인, 볼륨 0.25)
-      if (ambiSound && !ambiSound.isPlaying()) {
-        ambiSound.setVolume(0);
+      // 배경음 루프 재생 시작
+      if (ambiSound && ambiSound.isLoaded() && !ambiSound.isPlaying()) {
+        ambiSound.setVolume(0.25);
         ambiSound.loop();
-        ambiSound.setVolume(0.25, 3);
       }
     } else if (checkTutorial < 1) {
       currentState = GAME_STATE.TUTORIAL;
@@ -799,11 +803,10 @@ function mousePressed() {
     if (checkStart2 < 1) {
       initGame();
       currentState = GAME_STATE.PLAY;
-      // 배경음 루프 재생 시작 (3초 페이드인, 볼륨 0.25)
-      if (ambiSound && !ambiSound.isPlaying()) {
-        ambiSound.setVolume(0);
+      // 배경음 루프 재생 시작
+      if (ambiSound && ambiSound.isLoaded() && !ambiSound.isPlaying()) {
+        ambiSound.setVolume(0.25);
         ambiSound.loop();
-        ambiSound.setVolume(0.25, 3);
       }
     }
   }
@@ -863,7 +866,7 @@ async function uploadScreenshot() {
         // 성공 시 알림 처리
         particles = [];
         createNotificationParticles(width / 2, 80, 500, 60);
-        alpha = 255;
+        notificationAlpha = 255;
         showSaveMsg = true;
         saveMsgTimer = 180;
 
@@ -937,14 +940,14 @@ function drawSaveNotification() {
   if (saveMsgTimer > 0) {
     // 타이머가 남아있으면 시간만 줄이고, 투명도는 줄이지 마!
     saveMsgTimer--;
-    alpha = 255;
+    notificationAlpha = 255;
   } else {
     // 타이머가 0이 되면 그때부터 서서히 사라지기 시작
-    alpha = max(0, alpha - FADE_RATE);
+    notificationAlpha = max(0, notificationAlpha - FADE_RATE);
   }
 
   // 3. 완전히 투명해지면 종료
-  if (alpha <= 0 && saveMsgTimer <= 0) {
+  if (notificationAlpha <= 0 && saveMsgTimer <= 0) {
     showSaveMsg = false;
     particles = [];
   }
@@ -964,11 +967,11 @@ function drawSaveNotification() {
 
 function drawFadingNotification() {
   // 투명도가 0보다 클 때만 그리기
-  if (alpha > 0) {
+  if (notificationAlpha > 0) {
     // 회색 반투명 직사각형
     rectMode(CENTER);
     noStroke();
-    fill(220, 220, 220, alpha * 0.4); // 배경의 최대 투명도는 255가 아닌 100으로 유지
+    fill(220, 220, 220, notificationAlpha * 0.4); // 배경의 최대 투명도는 255가 아닌 100으로 유지
     rect(width / 2, 80, 500, 60, 20);
 
 
@@ -976,8 +979,8 @@ function drawFadingNotification() {
     textAlign(CENTER, CENTER);
     textFont(kubulimFont);
     textSize(24);
-    // fill(255) 대신 fill(255, alpha)로 텍스트도 같이 투명하게
-    fill(255, alpha);
+    // fill(255) 대신 fill(255, notificationAlpha)로 텍스트도 같이 투명하게
+    fill(255, notificationAlpha);
     text("정원의 모습이 서버에 저장되었습니다!", width / 2, 80);
   }
 }
