@@ -461,8 +461,8 @@ function runGameLogic() {
   processRegrowthQueue();
 
 
-  // coverage가 0.95을 넘는 순간: full-cover Moss 생성 + 1초 연출 준비
-  if (coverage > 0.95 && !overgrowFinished) {
+  // coverage가 0.9을 넘는 순간: full-cover Moss 생성 + 1초 연출 준비
+  if (coverage > 0.9 && !overgrowFinished) {
     // console.log('OVERGROW TRIGGER', coverage);
     overgrowFinished = true;
     overgrowFrames = 60;    // 1초 동안 연출 유지
