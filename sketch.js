@@ -3,6 +3,7 @@ let qrcodeDiv; // QR코드가 뜰 회색 박스
 let hudBg, startBg, tutorialBg, overBg;
 let kubulimFont;
 let tutorialTitle, tutorialDescript, overDescript;
+let lastPlayStateImg; // 마지막 플레이 화면을 저장할 변수
 
 
 let plantAssets = { stems: [], leaves: [], flowers: [] };
@@ -12,8 +13,10 @@ let lightImage = [];
 let prevCoverage = 0;
 let plantMossTimers = new Map();
 
-const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2, TUTORIAL: 3 };
+const GAME_STATE = { TITLE: 0, PLAY: 1, ENDING: 2, TUTORIAL: 3, STORYLINE: 4 };
 
+let storyDelayTimer = 120;
+let isMaxCovered = false; // 이끼가 화면을 다 덮었는지 확인하는 플래그
 
 // 설정값
 const CFG = {
@@ -130,7 +133,7 @@ function preload() {
   hudBg = loadImage('./assets/background/wall.png');
   startBg = loadImage('./assets/background/opening.png');
   tutorialBg = loadImage('./assets/background/tutorial.png');
-  // overBg = loadImage('./assets/background/tfour.jpg');
+  // overBg = loadImage('./assets/background/opening.jpg');
 
 
   kubulimFont = loadFont('./assets/font/BMKkubulimTTF.ttf');
@@ -190,8 +193,15 @@ function initGame() {
   mossStartPositions = [];
   regrowthQueue = [];
   gameTime = 0;
+
   overgrowFinished = false;
   overgrowFrames = 0;
+
+  prevCoverage = 0;
+  isMaxCovered = false;
+  storyDelayTimer = 120;
+  lastPlayStateImg = null;
+
   showSaveMsg = false; // 여기서 다시 0으로 만듦
   saveMsgTimer = 0;
 
@@ -226,6 +236,11 @@ function draw() {
     case GAME_STATE.PLAY:
       updateTimeCycle();
       runGameLogic();
+
+      checkAndTransitionToStory();
+      break;
+    case GAME_STATE.STORYLINE:
+      drawStoryLineScreen();
       break;
     case GAME_STATE.ENDING:
       drawEndingScreen();
@@ -234,11 +249,30 @@ function draw() {
 
 
   // 폭주 연출이 끝났다면 엔딩으로 전환
-  if (overgrowFinished && overgrowFrames <= 0 && currentState === GAME_STATE.PLAY) {
-    currentState = GAME_STATE.ENDING;
-  }
+  // if (overgrowFinished && overgrowFrames <= 0 && currentState === GAME_STATE.PLAY) {
+  //   currentState = GAME_STATE.ENDING;
+  // }
   drawSaveNotification();
   if (debugMode) drawDebugInfo();
+}
+
+// 화면 덮임 확인 및 딜레이 처리 함수
+function checkAndTransitionToStory() {
+  // 1. 이끼가 화면을 다 뒤덮었는지 확인
+  if (overgrowFinished && overgrowFrames <= 0) {
+    isMaxCovered = true; 
+  }
+
+  // 2. 다 덮였다면 2초 카운트다운 후 스토리라인 전환
+  if (isMaxCovered) {
+    storyDelayTimer--;
+    
+    // 2초(120프레임)가 지나면 상태 변경
+    if (storyDelayTimer <= 0) {
+      lastPlayStateImg = get();
+      currentState = GAME_STATE.STORYLINE;
+    }
+  }
 }
 
 
@@ -734,6 +768,26 @@ function drawTutorialScreen() {
   }
 }
 
+function drawStoryLineScreen(){
+  imageMode(CORNER);
+  // 캡처해둔 마지막 플레이 화면 그리기
+  if (lastPlayStateImg) {
+    image(lastPlayStateImg, 0, 0, 1024, 768);
+  } else {
+    background(0); // 만약 이미지가 없다면 검은색
+  }
+
+  // 내용은 아직 미정이라 하셨으므로 기존과 동일하게 처리하되 함수명만 분리
+  let storyText = `스토리라인이 나옵니다...\n(재시작하려면 R을 누르세요)`;
+
+  textSize(40);
+  fill(255);
+  textFont(kubulimFont);
+  textAlign(CENTER, CENTER);
+  text(storyText, 512, 384);
+
+  // 필요하다면 여기에 스토리 관련 이미지나 버튼 추가
+}
 
 function drawEndingScreen() {
   image(overBg, 0, 0, 1024, 768);
@@ -817,15 +871,35 @@ function mousePressed() {
 
 function keyPressed() {
   if (key === 'd' || key === 'D') debugMode = !debugMode;
+
+  if (currentState === GAME_STATE.STORYLINE && (key === 'r' || key === 'R' || key ==='ㄱ')) {
+    currentState = GAME_STATE.TITLE; // 혹은 바로 initGame() 후 PLAY
+    initGame(); 
+  }
+
   if (currentState === GAME_STATE.ENDING && keyCode === 82) {
     currentState = GAME_STATE.TITLE;
     // console.log(key);
   }
-  if (key === ' ' || keyCode === 32) {
-    if (currentState === GAME_STATE.PLAY) {
+
+  if (currentState === GAME_STATE.PLAY) {
+    // 게임 중 ESC 누르면 스토리라인으로 즉시 이동
+    if (keyCode === ESCAPE) {
+      lastPlayStateImg = null;
+      currentState = GAME_STATE.STORYLINE;
+    }
+
+    // 스페이스바 캡처 로직
+    if (key === ' ' || keyCode === 32) {
       uploadScreenshot();
     }
   }
+
+  // if (key === ' ' || keyCode === 32) {
+  //   if (currentState === GAME_STATE.PLAY) {
+  //     uploadScreenshot();
+  //   }
+  // }
 }
 
 
