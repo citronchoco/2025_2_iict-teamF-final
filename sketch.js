@@ -166,7 +166,7 @@ function setup() {
   rightPanel.style('gap', '10px'); // 버튼과 박스 사이 간격
 
   // 튜토리얼 버튼
-  let tutorialBtn = createButton('튜토리얼 다시보기');
+  let tutorialBtn = createButton('튜토리얼 다시 보기');
   tutorialBtn.parent(rightPanel);
   tutorialBtn.style('padding', '10px 0');
   tutorialBtn.style('background-color', '#777'); // QR박스보다 살짝 밝게
