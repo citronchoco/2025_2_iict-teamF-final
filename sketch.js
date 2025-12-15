@@ -177,7 +177,9 @@ function setup() {
 
   // 버튼 클릭 시 튜토리얼 화면으로 이동
   tutorialBtn.mousePressed(() => {
-     currentState = GAME_STATE.TUTORIAL;
+    setTimeout(()=>{
+      currentState = GAME_STATE.TUTORIAL;
+    }, 100); // 100ms(0.1초) 딜레이
   });
 
   // 3. 우측 QR 코드 박스(회색 사각형) 생성
@@ -764,6 +766,7 @@ function drawStartScreen() {
 }
 
 function drawTutorialScreen() {
+  imageMode(CORNER);
   if (currentTutorialSlide === 0) {
     if (tutorialImages.a) {
       image(tutorialImages.a, 0, 0, width, height)
