@@ -775,12 +775,49 @@ function drawTutorialScreen() {
     }
   }
 
+  // 튜토리얼 텍스트
+  const tutorialTexts = [
+    // tutorial_a.png
+    {
+      title: "빛과 그림자의 정원에 오신 것을 환영합니다.",
+      description: "               으로 벽을 덮어 자라나는                를 제거하세요. \n 마우스를 우클릭하여 정원에                을 심을 수 있습니다. \n                을                을 심을 자리에 비추면                이 자라납니다.",
+      x: width / 2,
+      y: height / 2,
+      size: 25,
+      color: color(255)
+    },
+    {
+      title: "",
+      description: "정원의 시간은 새벽-낮-황혼-밤의 순서로 흘러갑니다. \n 화면을 유심히 보면 지금이 어느 시간대인지 알 수 있을 거예요. \n                가 금세 자라나는 밤에는 더욱 부지런한 정원사가 되어야 합니다. \n 원한다면 언제든 스페이스바를 눌러 정원의 모습을 저장할 수 있습니다.",
+      x: width / 2,
+      y: height / 2 - 20,
+      size: 25,
+      color: color(255)
+    }
+  ];
+
+  const currentText = tutorialTexts[currentTutorialSlide];
+
+  if (currentText) {
+    textFont(kubulimFont);
+    textAlign(CENTER, CENTER);
+    textLeading(80);
+
+    textSize(currentText.size);
+    fill(currentText.color);
+    text(currentText.title, currentText.x, currentText.y - 180);
+
+    textSize(currentText.size);
+    fill(currentText.color);
+    text(currentText.description, currentText.x, currentText.y + 10);
+  }
+
   if (currentTutorialSlide < MAX_TUTORIAL_SLIDE - 1) {
     textFont(kubulimFont);
     textAlign(CENTER, CENTER);
     textSize(20);
-    fill(255, 180);
-    text("CLICK ANYWHERE ON SCREEN", width / 2, height - 100);
+    fill(255);
+    text("CLICK ANYWHERE ON SCREEN", width / 2, height - 200);
   }
   else if (currentTutorialSlide === MAX_TUTORIAL_SLIDE -1) {
     textFont(kubulimFont);
