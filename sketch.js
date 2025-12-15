@@ -839,13 +839,14 @@ function drawTutorialScreen() {
 }
 
 function initStorylineTyping() {
+  textLeading();
 
   if (storylineCase === 'ENDING') {
     storyTexts = [
       "기억의 성역에 들른 것을 환영합니다.",
       "이곳은 희망찬 새벽부터 깊은 밤까지, \n 시간이 끊임없이 순환하는 꿈의 정원입니다.",
-      "낮에는 당신이 심은 행복한 기억들이 꽃이 되어 피어나지만, \n 밤이 오면 잊혀짐의 섭리처럼 이끼가 스며듭니다.",
-      "잊혀져 가는 것들을 지키기 위한 당신의 여정에 함께하게 되어 영광이었습니다.",
+      "낮에는 당신이 심은 행복한 기억들이 꽃이 되어 피어나지만, \n 밤이 오면 망각의 섭리처럼 이끼가 스며듭니다.",
+      "기억에서 사라져 가는 것들을 지키기 위한 당신의 여정에 함께하게 되어 영광이었습니다.",
       "그럼 다음 정원사가 도착하기 전까지, 잠시 안녕."
     ];
   } else {
@@ -927,12 +928,14 @@ function drawEndingScreen() {
   image(startBg, 0, 0, 1024, 768);
 
 
-  overDescript = `PRESS    R    TO RESTART`;
+  overDescript = `PRESS   R   TO RESTART`;
 
   fill(250, 210, 140, 100);
   stroke(235, 217, 148);
-  ellipse(449, 391, 90, 90);
+  strokeWeight(4)
+  ellipse(446, 391, 70, 70);
 
+  strokeWeight(1)
   textSize(40);
   fill(255);
   textFont(kubulimFont);
