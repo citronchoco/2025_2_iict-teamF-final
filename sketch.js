@@ -780,7 +780,7 @@ function drawTutorialScreen() {
     // tutorial_a.png
     {
       title: "빛과 그림자의 정원에 오신 것을 환영합니다.",
-      description: "               으로 벽을 덮어 자라나는                를 제거하세요. \n 마우스를 우클릭하여 정원에                을 심을 수 있습니다. \n                을                을 심을 자리에 비추면                이 자라납니다.",
+      description: "               으로 벽을 덮어 자라나는                를 제거하세요. \n 마우스를 우클릭하여 정원에                을 심을 수 있습니다. \n                을                을 심은 자리에 비추면                이 자라납니다.",
       x: width / 2,
       y: height / 2,
       size: 25,
