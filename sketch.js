@@ -5,7 +5,6 @@ let kubulimFont;
 let tutorialTitle, tutorialDescript, overDescript;
 let lastPlayStateImg; // 마지막 플레이 화면을 저장할 변수
 
-
 let plantAssets = { stems: [], leaves: [], flowers: [] };
 let mossImages = [];
 let lightImage = [];
@@ -26,7 +25,6 @@ const CFG = {
   SAFE_TIME: 300         // 게임 시작 후 5초(300프레임) 동안 무적
 };
 
-
 // 상태 변수
 let currentState = GAME_STATE.TITLE;
 let debugMode = false;
@@ -34,16 +32,18 @@ let gameTime = 0;
 let timePhase = 0;
 let currentTimeTint = null; // 시간대 색조 (식물에 적용)
 
-
 // 화면 샘플 그리드 기준 이끼가 안 덮인 칸들, 폭주 타깃
 let emptySamplePositions = [];
 let overgrowTargetPos = null;
-
 
 // 폭주 연출을 한 번만 실행하기 위한 플래그 + 연출 프레임 카운트
 let overgrowFinished = false;
 let overgrowFrames = 0;      // 0이면 아직 연출 없음, 60이면 1초 연출
 
+// 튜토리얼 슬라이드용 변수
+let tutorialImages = {};
+let currentTutorialSlide = 0;
+const MAX_TUTORIAL_SLIDE = 2;
 
 // 저장 알림 메시지 관련 변수
 let showSaveMsg = false;
@@ -52,7 +52,6 @@ let notificationAlpha = 255;
 let FADE_RATE = 6;
 let notification_PARTICLE_COUNT = 20;
 let particles = [];
-
 
 // 오브젝트
 let plants = [];
@@ -65,8 +64,6 @@ let seeds = [];       // 씨앗 객체 배열
 let seedImage;
 let ambiSound;        // 배경음
 let crackSounds = []; // 부서지는 소리
-
-
 
 // 캡쳐한 화면 서버 저장용 변수
 let cnv;
@@ -138,7 +135,9 @@ function preload() {
   // UI 및 배경 리소스 로드
   hudBg = loadImage('./assets/background/wall.png');
   startBg = loadImage('./assets/background/opening.png');
-  tutorialBg = loadImage('./assets/background/tutorial.png');
+  tutorialImages.a = loadImage('./assets/background/tutorial_a.png');
+  tutorialImages.b = loadImage('./assets/background/tutorial_b.png');
+  // tutorialBg = loadImage('./assets/background/tutorial.png');
   // overBg = loadImage('./assets/background/opening.jpg');
 
 
@@ -764,39 +763,41 @@ function drawStartScreen() {
   }
 }
 
-
 function drawTutorialScreen() {
-  image(tutorialBg, 0, 0, 1024, 768);
+  if (currentTutorialSlide === 0) {
+    if (tutorialImages.a) {
+      image(tutorialImages.a, 0, 0, width, height)
+    }
+  }
+  else if (currentTutorialSlide === 1) {
+    if (tutorialImages.b) {
+      image(tutorialImages.b, 0, 0, width, height)
+    }
+  }
 
-
-  tutorialTitle = `빛과 그림자의 정원`;
-  tutorialDescript = `40초마다 새벽-낮-황혼-밤 순으로 시간이 흘러갑니다.\n 마우스를 통해 다양한 식물을 조종해 자유롭게 정원을 꾸밀 수 있습니다. \n 우클릭을 하면 새로운 씨앗이 생성됩니다. \n 밤 시간에는 조종이 불가하며 이끼가 랜덤하게 생성됩니다.\n 중간에 언제든지 스페이스바를 눌러 정원의 모습을 저장하실 수 있습니다.`;
-
-
-  textFont(kubulimFont);
-  textAlign(CENTER, CENTER);
-  strokeWeight(3);
-  fill(255);
-  textSize(40);
-  textLeading(30);
-  text(tutorialTitle, 512, 220);
-  strokeWeight(1);
-  textSize(25);
-  textLeading(70);
-  text(tutorialDescript, 512, 400);
-  textSize(30);
-  text(`START`, 720, 585);
-
-
-  let mouseOverStart2 = pow(mouseX - 720, 2) / pow(100, 2) + pow(mouseY - 570, 2) / pow(35, 2);
-  if (mouseOverStart2 < 1) {
-    noStroke();
-    fill(223, 169, 72, 100);
-    ellipse(720, 590, 200, 70);
-    fill(255)
-    strokeWeight(1)
+  if (currentTutorialSlide < MAX_TUTORIAL_SLIDE - 1) {
+    textFont(kubulimFont);
+    textAlign(CENTER, CENTER);
+    textSize(20);
+    fill(255, 180);
+    text("CLICK ANYWHERE ON SCREEN", width / 2, height - 100);
+  }
+  else if (currentTutorialSlide === MAX_TUTORIAL_SLIDE -1) {
+    textFont(kubulimFont);
+    textAlign(CENTER, CENTER);
     textSize(30);
+    fill(255);
     text(`START`, 720, 585);
+
+    let mouseOverStart2 = pow(mouseX - 720, 2) / pow(100, 2) + pow(mouseY - 570, 2) / pow(35, 2);
+    if (mouseOverStart2 < 1) {
+      noStroke();
+      fill(250, 210, 140, 100);
+      ellipse(720, 590, 200, 70);
+      textSize(30);
+      fill(255);
+      text(`START`, 720, 585)
+    }
   }
 }
 
@@ -949,14 +950,20 @@ function mousePressed() {
   }
   else if (currentState === GAME_STATE.TUTORIAL) {
     let checkStart2 = pow(mouseX - 720, 2) / pow(100, 2) + pow(mouseY - 570, 2) / pow(35, 2);
-    if (checkStart2 < 1) {
-      initGame();
-      currentState = GAME_STATE.PLAY;
-      // 배경음 루프 재생 시작
-      if (ambiSound && ambiSound.isLoaded() && !ambiSound.isPlaying()) {
-        ambiSound.setVolume(0.25);
-        ambiSound.loop();
+    let isLastSlide = currentTutorialSlide === MAX_TUTORIAL_SLIDE - 1;
+
+    if (isLastSlide) {
+      if (checkStart2 < 1) {
+        initGame();
+        currentState = GAME_STATE.PLAY;
+
+        if (ambiSound && ambiSound.isLoaded() && !ambiSound.isPlaying()) {
+          ambiSound.setVolume(0.25);
+          ambiSound.loop();
+        }
       }
+    } else {
+      currentTutorialSlide++;
     }
   }
 
