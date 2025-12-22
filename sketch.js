@@ -1,4 +1,4 @@
-let qrcodeDiv; // QR코드가 뜰 회색 박스
+let qrcodeDiv; // QR코드가 뜰 박스
 
 let hudBg, startBg, tutorialBg, overBg;
 let kubulimFont;
@@ -173,28 +173,31 @@ function setup() {
   urlInput.parent(rightPanel); // 우측 패널에 넣기
   urlInput.attribute('placeholder', 'Supabase URL');
   urlInput.style('padding', '5px');
-
+  urlInput.style('border-radius', '10px');
+  
   // 2) [입력창] Key
   keyInput = createInput('', 'password');
   keyInput.parent(rightPanel); // 우측 패널에 넣기
   keyInput.attribute('placeholder', 'API Key');
   keyInput.style('padding', '5px');
+  keyInput.style('border-radius', '10px');
 
   // 3) 연결 버튼
   connectBtn = createButton('서버 연결하기');
   connectBtn.parent(rightPanel); // 우측 패널에 넣기
   connectBtn.style('padding', '10px');
   connectBtn.style('cursor', 'pointer');
-  connectBtn.style('background-color', '#333');
+  connectBtn.style('background-color', '#799851');
   connectBtn.style('color', 'white');
   connectBtn.style('border', 'none');
+  connectBtn.style('border-radius', '10px');
   connectBtn.mousePressed(connectToSupabase);
 
   // 튜토리얼 버튼
   let tutorialBtn = createButton('튜토리얼 다시 보기');
   tutorialBtn.parent(rightPanel);
   tutorialBtn.style('padding', '10px 0');
-  tutorialBtn.style('background-color', '#777'); // QR박스보다 살짝 밝게
+  tutorialBtn.style('background-color', '#9FB878'); // QR박스보다 살짝 밝게
   tutorialBtn.style('color', '#fff');
   tutorialBtn.style('border', 'none');
   tutorialBtn.style('border-radius', '10px');
@@ -215,8 +218,8 @@ function setup() {
   // --- CSS 스타일 적용  ---
   qrcodeDiv.style('width', '200px');          
   qrcodeDiv.style('height', '200px');         
-  qrcodeDiv.style('background-color', '#555'); 
-  qrcodeDiv.style('color', '#aaa');           
+  qrcodeDiv.style('background-color', '#47622A'); 
+  qrcodeDiv.style('color', '#DFDDD1');           
   qrcodeDiv.style('display', 'flex'); // 글자 중앙 정렬용
   qrcodeDiv.style('justify-content', 'center');
   qrcodeDiv.style('align-items', 'center');
@@ -1126,6 +1129,7 @@ async function uploadScreenshot() {
         // 2. QR 코드 영역 스타일 변경 (회색 -> 흰색)
         qrcodeDiv.style('background-color', 'white'); 
         qrcodeDiv.style('color', 'black');
+        // qrcodeDiv.style('border', 'none');
         qrcodeDiv.html(''); 
 
         // 3. 실제 QR 코드 생성
