@@ -68,7 +68,10 @@ let crackSounds = []; // 부서지는 소리
 // 캡쳐한 화면 서버 저장용 변수
 let cnv;
 const BUCKET_NAME = 'image';
-let client;
+let client = null;
+let projectURL = "";
+let urlInput, keyInput, connectBtn; // 입력창과 버튼
+let isConnected = false; // 연결 여부 확인 플래그
 
 // 스토리라인 관련 변수
 let storyWriter = null;
@@ -163,6 +166,29 @@ function setup() {
   rightPanel.style('display', 'flex');
   rightPanel.style('flex-direction', 'column');
   rightPanel.style('gap', '10px'); // 버튼과 박스 사이 간격
+  rightPanel.style('width', '220px');
+
+  // 1) [입력창] URL
+  urlInput = createInput('', 'text');
+  urlInput.parent(rightPanel); // 우측 패널에 넣기
+  urlInput.attribute('placeholder', 'Supabase URL');
+  urlInput.style('padding', '5px');
+
+  // 2) [입력창] Key
+  keyInput = createInput('', 'password');
+  keyInput.parent(rightPanel); // 우측 패널에 넣기
+  keyInput.attribute('placeholder', 'API Key');
+  keyInput.style('padding', '5px');
+
+  // 3) 연결 버튼
+  connectBtn = createButton('서버 연결하기');
+  connectBtn.parent(rightPanel); // 우측 패널에 넣기
+  connectBtn.style('padding', '10px');
+  connectBtn.style('cursor', 'pointer');
+  connectBtn.style('background-color', '#333');
+  connectBtn.style('color', 'white');
+  connectBtn.style('border', 'none');
+  connectBtn.mousePressed(connectToSupabase);
 
   // 튜토리얼 버튼
   let tutorialBtn = createButton('튜토리얼 다시 보기');
@@ -198,10 +224,6 @@ function setup() {
 
   frameRate(60);
 
-  client = window.supabase.createClient(
-    'https://hrygwxiqjlxizstgirps.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyeWd3eGlxamx4aXpzdGdpcnBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg0NTIsImV4cCI6MjA4MDg1NDQ1Mn0.G_EW_3Hmi3kUN3P6zDQIsNuXTLHe1igduOLNYuNcJiY'
-  );
 
 
   // 캔버스 내에서 우클릭 컨텍스트 메뉴를 완전히 차단
@@ -1055,6 +1077,10 @@ function keyPressed() {
 }
 
 async function uploadScreenshot() {
+  if(!client || !isConnected){
+    alert("서버에 연결되지 않았습니다. 새로고침하여 URL과 Key를 입력해주세요.")
+    return;
+  }
   // 1. 현재 캔버스를 Base64 데이터로 변환 (기본값 PNG)
   // let base64Image = cnv.canvas.toDataURL("image/png");
 
@@ -1103,7 +1129,7 @@ async function uploadScreenshot() {
         qrcodeDiv.html(''); 
 
         // 3. 실제 QR 코드 생성
-        const publicURL = `https://hrygwxiqjlxizstgirps.supabase.co/storage/v1/object/public/${BUCKET_NAME}/${fileName}`;
+        const publicURL = `${projectURL}/storage/v1/object/public/${BUCKET_NAME}/${fileName}`;
         
         // QR 생성 (div 크기에 맞춤)
         new QRCode(qrcodeDiv.elt, {
@@ -1274,5 +1300,35 @@ function drawDebugInfo() {
     strokeWeight(2);
     rectMode(CENTER);
     rect(p.x, p.y - 20, 20, 20);
+  }
+}
+
+function connectToSupabase() {
+  const inputUrl = urlInput.value().trim();
+  const inputKey = keyInput.value().trim();
+
+  if (!inputUrl || !inputKey) {
+    alert("URL과 Key를 모두 입력해주세요!");
+    return;
+  }
+
+  try {
+    // 입력받은 값으로 클라이언트 생성
+    client = window.supabase.createClient(inputUrl, inputKey);
+    projectURL = inputUrl;
+    console.log("Supabase Client Initialized");
+    isConnected = true;
+
+    // 입력창과 버튼 숨기기
+    urlInput.hide();
+    keyInput.hide();
+    connectBtn.hide();
+    
+    // 알림
+    alert("연결되었습니다! 게임을 시작합니다.");
+
+  } catch (e) {
+    console.error(e);
+    alert("연결 중 오류가 발생했습니다. 정보를 확인해주세요.");
   }
 }
