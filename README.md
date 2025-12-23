@@ -17,6 +17,37 @@
 * 어둠의 정화: 시간이 흐를수록 증식하는 이끼 위를 빛으로 비추어 이끼를 정화한다.
 * 기억의 아카이빙: 정원의 가장 아름다운 순간 혹은 잠식된 최후의 모습을 캡처하여 소장할 수 있다.
 
+### 서버 설정 (필수)
+플레이 기록(스크린샷) 저장을 위해 사용자의 Supabase 연결 필요
+원활한 플레이를 위해 아래 순서대로 **Supabase Storage** 설정 요망
+
+#### 1. 프로젝트 생성 및 키 발급
+1. [Supabase](https://supabase.com/) 회원가입 후 `New Project` 생성
+2. `Project Settings` > `API` 메뉴에서 **Project URL**과 **API Key** 복사 (게임 시작 시 필요)
+
+#### 2. 스토리지(Bucket) 생성 **(중요!)**
+게임 코드와의 연동을 위해 반드시 아래 설정값 준수.
+
+1. 왼쪽 메뉴의 **Storage(보관함)** 아이콘 클릭 > **New Bucket** 클릭
+2. **Name of bucket:** `image` (대소문자 정확히 입력)
+3. **Public bucket:** `ON` (활성화)
+   * *OFF 상태일 경우 QR코드로 이미지 조회 불가*
+4. `Save` 클릭
+
+#### 3. 권한(Policy) 설정 **(가장 중요!)**
+이미지 업로드 권한 허용을 위한 필수 설정
+
+1. 왼쪽 메뉴의 **Storage** 아이콘 클릭 > 화면 중앙 상단의 **Policies** 탭 클릭
+2. `Buckets` 목록에 있는 `image` 항목 확인 후 우측 **New policy** 버튼 클릭
+3. `Get started quickly` 선택
+4. 템플릿 목록 중 `Allow access to JPG images in a public folder to anonymous users` 선택 > `Use this template` 클릭
+5. **Allowed operations** 항목 확인 및 수정:
+  * `INSERT` 체크 (업로드 필수)
+  * `SELECT` 체크 (조회 필수)
+6. `Review` > `Save Policy` 클릭
+
+**설정 완료.** 게임 실행 후 URL과 Key를 입력하여 접속
+
 ### 조작 방법
 **마우스**
 * 이동: 광원 이동
