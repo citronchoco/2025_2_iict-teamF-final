@@ -23,7 +23,10 @@
 
 #### 1. 프로젝트 생성 및 키 발급
 1. [Supabase](https://supabase.com/) 회원가입 후 `New Project` 생성
-2. `Project Settings` > `API` 메뉴에서 **Project URL**과 **API Key** 복사 (게임 시작 시 필요)
+2. 생성 완료 화면에서 **스크롤을 조금 내려** `Project URL`과 `API Key (anon/public)` 복사 (게임 시작 시 필요)
+* 생성 완료 화면에서 복사하지 못한 경우:
+    * `Project Settings` > `Data API` 메뉴에서 **Project URL** 복사
+    * `Project Settings` > `API keys` > `Legacy anon, service_role API keys` 탭에서 **API Key(anon/public)** 복사
 
 #### 2. 스토리지(Bucket) 생성 **(중요!)**
 게임 코드와의 연동을 위해 반드시 아래 설정값 준수.
